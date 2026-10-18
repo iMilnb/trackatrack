@@ -214,7 +214,7 @@ class Handler(SimpleHTTPRequestHandler):
         return MEDIA_TYPES.get(ext) or super().guess_type(path)
 
 
-def ensure_cert():
+def ensure_cert(extra_san=""):
     crt = os.path.join(APP_DIR, "cert.pem")
     key = os.path.join(APP_DIR, "cert.key")
     if os.path.exists(crt) and os.path.exists(key):
@@ -223,6 +223,8 @@ def ensure_cert():
     import subprocess
     hn = socket.gethostname().split(".")[0]
     san = "DNS:localhost,DNS:%s,DNS:%s.local,DNS:%s,IP:127.0.0.1,IP:192.168.9.58" % (hn, hn, socket.getfqdn())
+    if extra_san:
+        san += "," + extra_san
     subprocess.run(
         ["openssl", "req", "-x509", "-newkey", "rsa:2048", "-nodes", "-days", "3650",
          "-subj", "/CN=%s" % hn, "-addext", "subjectAltName=%s" % san,
@@ -239,6 +241,7 @@ def main():
     ap.add_argument("--host", default="0.0.0.0")
     ap.add_argument("--rescan", action="store_true", help="force library rescan")
     ap.add_argument("--ssl", action="store_true", help="serve HTTPS with a self-signed cert")
+    ap.add_argument("--san", default="DNS:kressh", help="extra cert SAN entries (LAN alias names)")
     args = ap.parse_args()
     CFG["music_dir"] = os.path.realpath(os.path.expanduser(args.music_dir))
     os.chdir(APP_DIR)
@@ -260,7 +263,7 @@ def main():
     httpd = ThreadingHTTPServer((args.host, args.port), Handler)
     if args.ssl:
         import ssl
-        crt, key = ensure_cert()
+        crt, key = ensure_cert(args.san)
         ctx = ssl.SSLContext(ssl.PROTOCOL_TLS_SERVER)
         ctx.load_cert_chain(crt, key)
         httpd.socket = ctx.wrap_socket(httpd.socket, server_side=True)
