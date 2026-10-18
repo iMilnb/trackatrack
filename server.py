@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Traktor-JS dev server: static app + /api/tracks + /api/config + /audio/<path> (Range support)."""
+"""Trackatrack dev server: static app + /api/tracks + /api/config + /audio/<path> (Range support)."""
 import argparse
 import json
 import os
@@ -215,7 +215,7 @@ class Handler(SimpleHTTPRequestHandler):
 
 
 def main():
-    ap = argparse.ArgumentParser(description="Traktor-JS server")
+    ap = argparse.ArgumentParser(description="Trackatrack server")
     ap.add_argument("--music-dir", default=os.path.expanduser("~/Music"))
     ap.add_argument("--port", type=int, default=8360)
     ap.add_argument("--host", default="0.0.0.0")

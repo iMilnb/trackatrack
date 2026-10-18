@@ -3,7 +3,7 @@ let dbp = null;
 function db() {
   if (!dbp) {
     dbp = new Promise((res, rej) => {
-      const r = indexedDB.open("traktorjs", 1);
+      const r = indexedDB.open("trackatrack", 1);
       r.onupgradeneeded = () => r.result.createObjectStore("analysis");
       r.onsuccess = () => res(r.result);
       r.onerror = () => rej(r.error);

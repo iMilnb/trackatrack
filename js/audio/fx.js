@@ -1,4 +1,4 @@
-/** FX chains (post-EQ / pre-fader per deck, serial pair on master), Traktor-style DryWet. */
+/** FX chains (post-EQ / pre-fader per deck, serial pair on master), DryWet crossfade like classic DJ mixers. */
 
 export const FX_TYPES = {
   filter: { label: "Filter", p1: "CUTOFF", p2: "RESONANCE", d: [0.45, 0.18] },

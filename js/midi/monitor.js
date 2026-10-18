@@ -85,11 +85,12 @@ export function initMonitor(hub) {
   });
   const expBox = panel.querySelector("#monexport-box");
   panel.querySelector("#monclear").addEventListener("click", () => {
+    localStorage.removeItem("ta-midi-overrides");
     localStorage.removeItem("tj-midi-overrides");
     location.reload();
   });
   panel.querySelector("#monexport").addEventListener("click", () => {
-    const raw = JSON.parse(localStorage.getItem("tj-midi-overrides") || "[]");
+    const raw = JSON.parse(localStorage.getItem("ta-midi-overrides") || localStorage.getItem("tj-midi-overrides") || "[]");
     panel.querySelector("#monexport-txt").value = JSON.stringify(
       raw.map((e) => ({ ...e, s: `0x${e.s.toString(16)}`, d: `0x${e.d.toString(16)}` })), null, 1);
     expBox.hidden = false;

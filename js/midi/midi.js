@@ -48,7 +48,7 @@ export class MidiHub {
 
   async _loadOverrides() {
     try {
-      const ls = JSON.parse(localStorage.getItem("tj-midi-overrides") || "[]");
+      const ls = JSON.parse(localStorage.getItem("ta-midi-overrides") || localStorage.getItem("tj-midi-overrides") || "[]");
       this._overrides.push(...ls);
     } catch { /* ignore */ }
     const file = await getJSONOrNull("js/midi/mapping-override.json");
@@ -57,7 +57,7 @@ export class MidiHub {
 
   addOverride(entry) {
     this._overrides.push(entry);
-    localStorage.setItem("tj-midi-overrides", JSON.stringify(this._overrides));
+    localStorage.setItem("ta-midi-overrides", JSON.stringify(this._overrides));
     this.reindex();
   }
 
