@@ -1,0 +1,105 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Traktor-JS</title>
+<link rel="stylesheet" href="css/app.css">
+</head>
+<body>
+<div id="topbar">
+  <div class="logo">TRAKTOR<span>-JS</span></div>
+  <span class="grow"></span>
+  <label class="tb">OUT <select id="masterOut"></select></label>
+  <label class="tb volbox">MIX <input id="masterVol" type="range" min="0" max="1" step="0.01" value="0.85"></label>
+  <canvas id="masterMeter" class="hmeter"></canvas>
+  <span class="tb sepr"></span>
+  <label class="tb">PHONES <select id="cueOut"></select></label>
+  <label class="tb volbox">CUE <input id="cueLevel" type="range" min="0" max="1" step="0.01" value="0.7"></label>
+  <button id="qBtn" class="btn tb on" title="Quantize (beatloop/cue snap)">Q:4</button>
+  <span id="midiStatus" class="tb">MIDI: –</span>
+  <button id="monBtn" class="btn tb">MON</button>
+</div>
+
+<div id="decks">
+  <div class="deckslot" id="deckslotA"></div>
+  <div id="mixer">
+    <div id="strips"></div>
+    <div id="xfrow"><span class="xf-label">XF</span><div id="xfader"></div></div>
+  </div>
+  <div class="deckslot" id="deckslotB"></div>
+</div>
+
+<div id="fxrack"></div>
+
+<div id="library"></div>
+
+<template id="deckTpl">
+  <div class="deckmod">
+    <div class="deck-h">
+      <span class="d-title">–</span><span class="d-artist"></span>
+      <span class="grow"></span>
+      <span class="d-state"></span>
+      <span class="d-remain">--:--</span><span class="d-dur"></span>
+      <span class="d-bpm">–</span><span class="d-key"></span><span class="d-letter">?</span>
+    </div>
+    <div class="deck-main"><canvas class="d-detail"></canvas></div>
+    <div class="deck-ov">
+      <button class="btn to-cue" title="Jump to cue">⇤</button>
+      <canvas class="d-ov"></canvas>
+      <span class="d-loopind"></span>
+      <span class="zoom"><button class="btn z-out" title="Zoom out">−</button><span class="z-lbl">32</span><button class="btn z-in" title="Zoom in">+</button></span>
+    </div>
+    <div class="deck-t">
+      <button class="btn play" title="Play/Pause (Space)">▶</button>
+      <button class="btn cue">CUE</button>
+      <button class="btn cup">CUP</button>
+      <button class="btn flx">FLX</button>
+      <button class="btn rev">REV</button>
+      <span class="tsep"></span>
+      <span class="loopbtns">
+        <button class="btn lb" data-n="0.5">½</button>
+        <button class="btn lb" data-n="1">1</button>
+        <button class="btn lb" data-n="2">2</button>
+        <button class="btn lb" data-n="4">4</button>
+        <button class="btn lb" data-n="8">8</button>
+        <button class="btn lb" data-n="16">16</button>
+        <button class="btn lb" data-n="32">32</button>
+        <button class="btn lin">IN</button>
+        <button class="btn lout">OUT</button>
+      </span>
+    </div>
+    <div class="deck-s">
+      <button class="btn sync">SYNC</button>
+      <button class="btn master">MASTER</button>
+      <span class="gridshift">GRID <button class="btn g-back" title="shift grid -1 beat">◀</button><button class="btn g-fwd" title="shift grid +1 beat">▶</button></span>
+    </div>
+    <div class="deck-rail">
+      <div class="t-pct">+0.0%</div>
+      <div class="tempo"></div>
+      <div class="vlabel">TEMPO</div>
+    </div>
+  </div>
+</template>
+
+<template id="stripTpl">
+  <div class="strip">
+    <div class="s-letter">A</div>
+    <div class="s-knobs"></div>
+    <div class="s-low">
+      <canvas class="s-meter"></canvas>
+      <div class="s-vol"></div>
+    </div>
+    <button class="btn pfl" title="Pre-fader listen to phones">PFL</button>
+    <div class="s-key"></div>
+  </div>
+</template>
+
+<script>
+window.__errs = [];
+window.addEventListener("error", (e) => window.__errs.push(e.message + " @" + e.filename + ":" + e.lineno));
+window.addEventListener("unhandledrejection", (e) => window.__errs.push("REJECT: " + (e.reason && e.reason.message || e.reason)));
+setInterval(() => { if (window.__errs.length) document.title = "ERRS: " + window.__errs.slice(-3).join(" | "); }, 1500);
+</script>
+<script type="module" src="js/main.js"></script>
+</body>
+</html>
