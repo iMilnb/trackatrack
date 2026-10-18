@@ -1,2 +1,4 @@
 .library-cache.json
 __pycache__/
+cert.pem
+cert.key

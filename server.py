@@ -214,12 +214,31 @@ class Handler(SimpleHTTPRequestHandler):
         return MEDIA_TYPES.get(ext) or super().guess_type(path)
 
 
+def ensure_cert():
+    crt = os.path.join(APP_DIR, "cert.pem")
+    key = os.path.join(APP_DIR, "cert.key")
+    if os.path.exists(crt) and os.path.exists(key):
+        return crt, key
+    import socket
+    import subprocess
+    hn = socket.gethostname().split(".")[0]
+    san = "DNS:localhost,DNS:%s,DNS:%s.local,DNS:%s,IP:127.0.0.1,IP:192.168.9.58" % (hn, hn, socket.getfqdn())
+    subprocess.run(
+        ["openssl", "req", "-x509", "-newkey", "rsa:2048", "-nodes", "-days", "3650",
+         "-subj", "/CN=%s" % hn, "-addext", "subjectAltName=%s" % san,
+         "-keyout", key, "-out", crt],
+        check=True, capture_output=True)
+    print("generated self-signed cert (%s)" % san)
+    return crt, key
+
+
 def main():
     ap = argparse.ArgumentParser(description="Trackatrack server")
     ap.add_argument("--music-dir", default=os.path.expanduser("~/Music"))
     ap.add_argument("--port", type=int, default=8360)
     ap.add_argument("--host", default="0.0.0.0")
     ap.add_argument("--rescan", action="store_true", help="force library rescan")
+    ap.add_argument("--ssl", action="store_true", help="serve HTTPS with a self-signed cert")
     args = ap.parse_args()
     CFG["music_dir"] = os.path.realpath(os.path.expanduser(args.music_dir))
     os.chdir(APP_DIR)
@@ -227,17 +246,25 @@ def main():
         get_tracks(force=True)
         print("rescanned: %d tracks" % len(CFG["cache"]))
     tracks = get_tracks()
+    scheme = "https" if args.ssl else "http"
     print("music dir: %s (%d tracks)" % (CFG["music_dir"], len(tracks)))
-    print("http://localhost:%d" % args.port)
+    print("%s://localhost:%d" % (scheme, args.port))
     try:
         import socket
         s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
         s.connect(("10.255.255.255", 1))
-        print("http://%s:%d" % (s.getsockname()[0], args.port))
+        print("%s://%s:%d" % (scheme, s.getsockname()[0], args.port))
         s.close()
     except OSError:
         pass
-    ThreadingHTTPServer((args.host, args.port), Handler).serve_forever()
+    httpd = ThreadingHTTPServer((args.host, args.port), Handler)
+    if args.ssl:
+        import ssl
+        crt, key = ensure_cert()
+        ctx = ssl.SSLContext(ssl.PROTOCOL_TLS_SERVER)
+        ctx.load_cert_chain(crt, key)
+        httpd.socket = ctx.wrap_socket(httpd.socket, server_side=True)
+    httpd.serve_forever()
 
 
 if __name__ == "__main__":

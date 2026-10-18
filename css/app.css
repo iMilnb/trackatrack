@@ -206,3 +206,8 @@ textarea {
 .fx-knobs { display: flex; gap: 8px; flex: none; }
 .fx-knobs .knobwrap { flex-direction: column-reverse; align-items: center; gap: 1px; }
 .fx-knobs .knob-label { width: auto; text-align: center; font-size: 8px; }
+
+#insecbar {
+  position: fixed; top: 34px; left: 0; right: 0; z-index: 200;
+  background: #7a2712; color: #ffe3d9; font-size: 12px; padding: 6px 12px; text-align: center;
+}

@@ -4,7 +4,9 @@ import { FxChain } from "./fx.js";
 export class Engine {
   constructor() {
     this.ctx = new AudioContext({ latencyHint: "interactive" });
-    this.ready = this.ctx.audioWorklet.addModule("js/audio/deck-processor.js");
+    this.ready = this.ctx.audioWorklet
+      ? this.ctx.audioWorklet.addModule("js/audio/deck-processor.js")
+      : Promise.reject(new Error("AudioWorklet unavailable (insecure context: use https:// or IP URL)"));
     const ctx = this.ctx;
     this.masterVol = ctx.createGain();
     this.limiter = ctx.createDynamicsCompressor();
