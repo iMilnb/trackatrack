@@ -77,7 +77,7 @@ function makeRuler(deck, cv) {
     c.clearRect(0, 0, w, h);
     if (!deck.bpm) return;
     const vis = 8, ppb = w / vis;
-    const b0 = deck.beats() - vis / 2;
+    const b0 = deck.beats - vis / 2;
     const ref = Math.round(deck.firstBeat);
     for (let b = Math.ceil(b0); b < b0 + vis; b++) {
       const x = (b - b0) * ppb;
@@ -452,6 +452,7 @@ function ledSync() {
 let masterMeter = null;
 let tickN = 0;
 function frame() {
+  try {
   for (const { deck, scope, ruler, mod } of decks) {
     deck.tick();
     scope.draw();
@@ -483,6 +484,12 @@ function frame() {
     $("#audioInd").classList.toggle("ok", engine.ctx.state === "running");
   }
   ledSync();
+  } catch (e) {
+    if (!frame._eT || performance.now() - frame._eT > 3000) {
+      frame._eT = performance.now();
+      window.__errs.push("FRAME: " + (e && e.message || e));
+    }
+  }
   requestAnimationFrame(frame);
 }
 
