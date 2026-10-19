@@ -24,6 +24,10 @@ export class Library {
     this.selected = null;
     this.deckOf = {}; // trackId -> deck index
     this.expanded = new Set();
+    this.tab = "collection"; // collection | history
+    this.history = (() => {
+      try { return JSON.parse(localStorage.getItem("ta-history") || "[]"); } catch { return []; }
+    })();
     this._build();
   }
 
@@ -35,17 +39,28 @@ export class Library {
 
   _build() {
     this.root.innerHTML = `
-      <div id="tree"></div>
-      <div id="libmain">
-        <div id="libbar">
-          <input id="search" type="search" placeholder="filter…" autocomplete="off">
-          <span id="libcount"></span>
-          <span class="hint">dbl-click / Enter = load to free deck</span>
+      <div id="libtabs">
+        <button class="libtab sel" data-tab="collection">Track Collection</button>
+        <button class="libtab" data-tab="history">History</button>
+      </div>
+      <div id="libbody">
+        <div id="tree"></div>
+        <div id="libmain">
+          <div id="libbar">
+            <input id="search" type="search" placeholder="filter…" autocomplete="off">
+            <span id="libcount"></span>
+            <span class="hint">dbl-click / Enter = load to free deck</span>
+          </div>
+          <div id="tblwrap"><table id="libtable"><thead><tr></tr></thead><tbody></tbody></table></div>
         </div>
-        <div id="tblwrap"><table id="libtable"><thead><tr></tr></thead><tbody></tbody></table></div>
       </div>`;
     this.treeEl = this.root.querySelector("#tree");
     this.tbody = this.root.querySelector("#libtable tbody");
+    this.root.querySelectorAll(".libtab").forEach((b) => b.addEventListener("click", () => {
+      this.tab = b.dataset.tab;
+      this._syncTabs();
+      this.render();
+    }));
     const hr = this.root.querySelector("#libtable thead tr");
     hr.innerHTML = COLS.map((c) => `<th data-k="${c.k}" style="${c.w ? `width:${c.w}px` : ""}">${c.label || ""}</th>`).join("");
     hr.addEventListener("click", (e) => {
@@ -118,14 +133,45 @@ export class Library {
     });
   }
 
+  _syncTabs() {
+    this.root.querySelectorAll(".libtab").forEach((b) => b.classList.toggle("sel", b.dataset.tab === this.tab));
+    this.treeEl.style.display = this.tab === "history" ? "none" : "";
+    this.root.querySelector("#libbody").style.gridTemplateColumns = this.tab === "history" ? "0 1fr" : "210px 1fr";
+  }
+
+  /** Record a loaded track (History tab), newest first, deduped by id. */
+  noteHistory(track) {
+    if (!track) return;
+    this.history = [track.id].concat(this.history.filter((id) => id !== track.id)).slice(0, 60);
+    try { localStorage.setItem("ta-history", JSON.stringify(this.history)); } catch {}
+  }
+
+  /** Scroll to and highlight a loaded track (deck ♪ button). */
+  reveal(track) {
+    if (!track) return;
+    this.tab = "collection";
+    this._syncTabs();
+    this.query = "";
+    this.root.querySelector("#search").value = "";
+    this.render();
+    this._select(track.id);
+    const tr = this.tbody.querySelector(`tr[data-id="${cssEsc(track.id)}"]`);
+    if (tr) { tr.classList.add("reveal-pulse"); setTimeout(() => tr.classList.remove("reveal-pulse"), 900); }
+  }
+
   filtered() {
     let ts = this.tracks;
+    if (this.tab === "history") {
+      const byId = new Map(this.tracks.map((t) => [t.id, t]));
+      ts = this.history.map((id) => byId.get(id)).filter(Boolean);
+    }
     if (this.filterDir) ts = ts.filter((t) => t.dir === this.filterDir || t.dir.startsWith(this.filterDir + "/"));
     if (this.query) {
       ts = ts.filter((t) =>
         `${t.title} ${t.artist} ${t.file}`.toLowerCase().includes(this.query));
     }
     const { k, dir } = this.sort;
+    if (this.tab !== "history") {
     const keyf = {
       title: (t) => t.title.toLowerCase(),
       artist: (t) => (t.artist || "\uffff").toLowerCase(),
@@ -135,6 +181,7 @@ export class Library {
       dur: (t) => t.duration || 1e9,
     }[k];
     if (keyf) ts = [...ts].sort((a, b) => (keyf(a) > keyf(b) ? dir : keyf(a) < keyf(b) ? -dir : 0));
+    }
     return ts;
   }
 

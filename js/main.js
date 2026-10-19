@@ -1,12 +1,12 @@
-import { Engine } from "./audio/engine.js";
 import { Deck } from "./audio/deck.js";
+import { DeckScope } from "./waveform.js";
+import { Engine } from "./audio/engine.js";
 import { FX_TYPES } from "./audio/fx.js";
 import { Library } from "./library.js";
 import { MidiHub, BEATLOOP_SIZES } from "./midi/midi.js";
 import { initMonitor } from "./midi/monitor.js";
-import { DeckScope } from "./waveform.js";
 import { makeKnob, makeVFader, makeHFader, makeMeter } from "./ui.js";
-import { parseKey, camelotColor } from "./util.js";
+import { parseKey, camelotColor, clamp } from "./util.js";
 
 const $ = (s) => document.querySelector(s);
 
@@ -17,13 +17,15 @@ let focused = 0;
 const mixer = {
   vol: [1, 1],
   xf: 0.5,
-  assign: ["xf", "xf"],
   strips: [],
   xfFader: null,
+  linked: false,
 };
 
+// master clock (Global section)
+const mclock = { auto: true, idx: 0 };
+
 function xfGain(i) {
-  if (mixer.assign[i] !== "xf") return 1;
   return i === 0 ? Math.cos(mixer.xf * Math.PI / 2) : Math.sin(mixer.xf * Math.PI / 2);
 }
 function applyMixer() {
@@ -34,6 +36,73 @@ function applyMixer() {
   }
 }
 
+// ---- FX unit routing (channel inserts) ----
+function applyFxRouting() {
+  for (const { deck } of decks) if (deck.fxIn) deck.fxIn.disconnect();
+  for (const u of engine.units) { u.in.disconnect(); u.out.disconnect(); }
+  for (const { deck } of decks) {
+    if (deck.route != null) {
+      const u = engine.units[deck.route];
+      deck.fxIn.connect(u.in);
+      u.out.connect(deck.vol);
+    } else {
+      deck.fxIn.connect(deck.vol);
+    }
+  }
+  for (const s of mixer.strips) refreshStripFx(s);
+}
+function refreshStripFx(s) {
+  if (!s) return;
+  s.sfx1.classList.toggle("on", s.deck.route === 0);
+  s.sfx2.classList.toggle("on", s.deck.route === 1);
+}
+
+function setTempoBoth(d, p) {
+  d.setTempoPct(p);
+  d.els.tFader && d.els.tFader.set(p);
+  if (mixer.linked) {
+    const o = decks[1 - d.idx] && decks[1 - d.idx].deck;
+    if (o && o !== d) { o.setTempoPct(p); o.els.tFader && o.els.tFader.set(p); }
+  }
+}
+
+// ---- beat ruler ----
+function makeRuler(deck, cv) {
+  const c = cv.getContext("2d");
+  const draw = () => {
+    const dpr = window.devicePixelRatio || 1;
+    const w = Math.max(1, cv.clientWidth * dpr | 0), h = Math.max(1, cv.clientHeight * dpr | 0);
+    if (cv.width !== w) cv.width = w;
+    if (cv.height !== h) cv.height = h;
+    c.clearRect(0, 0, w, h);
+    if (!deck.bpm) return;
+    const vis = 8, ppb = w / vis;
+    const b0 = deck.beats() - vis / 2;
+    const ref = Math.round(deck.firstBeat);
+    for (let b = Math.ceil(b0); b < b0 + vis; b++) {
+      const x = (b - b0) * ppb;
+      const isBar = ((b - ref) % 4 + 4) % 4 === 0;
+      c.fillStyle = isBar ? "#cfd2d8" : "#5a5d63";
+      c.fillRect(x - dpr / 2, isBar ? h * 0.08 : h * 0.3, dpr, isBar ? h * 0.84 : h * 0.4);
+    }
+    c.fillStyle = deck.playing ? "#a8e04a" : "#8a8d94";
+    c.fillRect(w / 2 - dpr / 2, 0, dpr, h);
+  };
+  let dragging = false, lastX = 0;
+  cv.addEventListener("pointerdown", (e) => {
+    dragging = true; lastX = e.clientX;
+    cv.setPointerCapture(e.pointerId);
+  });
+  cv.addEventListener("pointermove", (e) => {
+    if (!dragging || !deck.bpm) return;
+    const dx = e.clientX - lastX; lastX = e.clientX;
+    deck.firstBeat -= dx / (cv.clientWidth / 8);
+  });
+  window.addEventListener("pointerup", () => (dragging = false));
+  return { draw };
+}
+
+// ---- decks ----
 function buildDeck(i, letter, slotSel) {
   const mod = $("#deckTpl").content.firstElementChild.cloneNode(true);
   $(slotSel).appendChild(mod);
@@ -48,7 +117,8 @@ function buildDeck(i, letter, slotSel) {
   };
   const deck = new Deck(i, letter, engine, els);
   const scope = new DeckScope(deck, q(".d-detail"), q(".d-ov"), q(".z-lbl"));
-  const tf = makeVFader({ min: -0.08, max: 0.08, value: 0, onInput: (p) => deck.setTempoPct(p) });
+  const ruler = makeRuler(deck, q(".d-ruler"));
+  const tf = makeVFader({ min: -0.08, max: 0.08, value: 0, onInput: (p) => setTempoBoth(deck, p) });
   els.tFader = tf;
   q(".tempo").appendChild(tf.el);
 
@@ -60,34 +130,55 @@ function buildDeck(i, letter, slotSel) {
   q(".rev").addEventListener("pointerdown", () => deck.pressRev(true));
   window.addEventListener("pointerup", () => deck.pressRev(false));
   q(".sync").addEventListener("click", () => doSync(deck));
-  q(".master").addEventListener("click", () => { for (const o of decks) o.deck.setMaster(o.deck === deck); });
+  q(".master").addEventListener("click", () => {
+    for (const o of decks) o.deck.setMaster(o.deck === deck);
+    mclock.idx = deck.idx;
+  });
   q(".to-cue").addEventListener("click", () => deck.toCue());
+  q(".reveal").addEventListener("click", () => library.reveal(deck.track));
   for (const b of els.loopBtns) b.addEventListener("click", () => deck.loopSetBeats(+b.dataset.n));
   els.lin.addEventListener("click", () => deck.loopIn());
   els.lout.addEventListener("click", () => deck.loopOut());
+  q(".lhalf").addEventListener("click", () => deck.loopHalve());
+  q(".ldbl").addEventListener("click", () => deck.loopDouble());
   q(".z-in").addEventListener("click", () => scope.zoom(2));
   q(".z-out").addEventListener("click", () => scope.zoom(0.5));
-  q(".g-back").addEventListener("click", () => { deck.firstBeat -= deck.spb; });
-  q(".g-fwd").addEventListener("click", () => { deck.firstBeat += deck.spb; });
+  q(".prev").addEventListener("click", () => stepLoad(deck, -1));
+  q(".next").addEventListener("click", () => stepLoad(deck, 1));
   mod.addEventListener("pointerdown", () => { focused = i; });
-  decks.push({ deck, scope, mod, els });
+  decks.push({ deck, scope, ruler, mod, els });
 }
 
+function stepLoad(deck, dir) {
+  library.moveSel(dir);
+  const t = library.selectedTrack();
+  if (t) loadTrack(t, deck.idx);
+}
+
+// ---- mixer strips ----
 function buildStrip(i, letter) {
   const el = $("#stripTpl").content.firstElementChild.cloneNode(true);
+  el.classList.add("l" + letter);
   $("#strips").appendChild(el);
   const q = (s) => el.querySelector(s);
   q(".s-letter").textContent = letter;
   const deck = decks[i].deck;
   const knobs = {};
-  for (const [k, label, val] of [["gain", "GAIN", 0.5], ["hi", "HI", 0.5], ["mid", "MID", 0.5], ["low", "LOW", 0.5]]) {
-    const kn = makeKnob({
-      label, value: val,
-      onInput: (v) => (k === "gain" ? deck.setGain(v) : deck.setEq(k, v)),
-    });
+  for (const [k, label, cb] of [
+    ["gain", "GAIN", (v) => deck.setGain(v)],
+    ["hi", "HI", (v) => deck.setEq("hi", v)],
+    ["mid", "MID", (v) => deck.setEq("mid", v)],
+    ["low", "LOW", (v) => deck.setEq("low", v)],
+    ["fltr", "FLTR", (v) => deck.setFilter(v)],
+  ]) {
+    const kn = makeKnob({ label, value: 0.5, onInput: cb });
     knobs[k] = kn;
     q(".s-knobs").appendChild(kn.el);
   }
+  const setRoute = (r) => { deck.route = deck.route === r ? null : r; applyFxRouting(); };
+  const sfx1 = q(".sfx1"), sfx2 = q(".sfx2");
+  sfx1.addEventListener("click", () => setRoute(0));
+  sfx2.addEventListener("click", () => setRoute(1));
   const vol = makeVFader({ min: 0, max: 1, value: 1, onInput: (v) => { mixer.vol[i] = v; applyMixer(); } });
   q(".s-vol").appendChild(vol.el);
   const meter = makeMeter(q(".s-meter"), true);
@@ -96,53 +187,145 @@ function buildStrip(i, letter) {
     deck.setPfl(!deck.pfl);
     pfl.classList.toggle("on", deck.pfl);
   });
-  mixer.strips[i] = { el, deck, knobs, vol, meter, pfl, keyEl: q(".s-key"), lastKey: "" };
+  mixer.strips[i] = { el, deck, knobs, vol, meter, pfl, sfx1, sfx2, keyEl: q(".s-key"), lastKey: "" };
 }
 
-// ---- FX rack ----
-const fxSlots = [];
+// ---- FX units (global section) ----
+const fxUIs = [];
 
-function fxSlotUI(rack, name, chain) {
-  const el = document.createElement("div");
-  el.className = "fxmod";
-  el.innerHTML = `
-    <div class="fx-h"><span class="fx-title">${name}</span><button class="btn fx-on">FX</button></div>
-    <select class="fx-type"><option value="">\u2014</option>${
-      Object.entries(FX_TYPES).map(([k, v]) => `<option value="${k}">${v.label}</option>`).join("")}</select>
-    <div class="fx-knobs"></div>`;
-  rack.appendChild(el);
-  const onB = el.querySelector(".fx-on"), sel = el.querySelector(".fx-type");
-  const knobs = {};
-  for (const [key, lbl, cb] of [["mix", "MIX", (v) => chain.setMix(v)], ["p1", "P1", (v) => chain.setP1(v)], ["p2", "P2", (v) => chain.setP2(v)]]) {
-    const kn = makeKnob({ label: lbl, value: 0.5, bipolar: false, onInput: cb });
-    knobs[key] = kn;
-    el.querySelector(".fx-knobs").appendChild(kn.el);
+function buildUnit(n, slotSel) {
+  const unit = engine.units[n - 1];
+  const tpl = $("#unitTpl").content.firstElementChild.cloneNode(true);
+  const host = $(slotSel);
+  host.replaceWith(tpl);
+  tpl.id = "unit" + n;
+  const q = (s) => tpl.querySelector(s);
+  q(".u-num").textContent = n + ":";
+
+  const dwKnob = makeKnob({ label: "D/W", value: 0.5, bipolar: false, onInput: (v) => unit.setDw(v) });
+  q(".u-dw").appendChild(dwKnob.el);
+
+  const typeOpts = `<option value="">—</option>` +
+    Object.entries(FX_TYPES).map(([k, v]) => `<option value="${k}">${v.label}</option>`).join("");
+  const slots = unit.slots.map((chain, si) => {
+    const sel = document.createElement("select");
+    sel.className = "u-sel";
+    sel.innerHTML = typeOpts;
+    q(".u-sels").appendChild(sel);
+    const knob = makeKnob({ label: "P1", value: 0.5, bipolar: false, onInput: (v) => chain.setP1(v) });
+    const btn = document.createElement("button");
+    btn.className = "btn u-fxb";
+    btn.textContent = "OFF";
+    const pcol = document.createElement("div");
+    pcol.className = "u-pcol";
+    pcol.append(knob.el, btn);
+    q(".u-param").appendChild(pcol);
+    const relabel = () => {
+      const F = FX_TYPES[chain.type];
+      knob.el.querySelector(".knob-label").textContent = F ? F.p1 : "P1";
+      btn.textContent = chain.enabled && F ? F.label : "OFF";
+      btn.classList.toggle("on", chain.enabled && !!F);
+    };
+    const setType = (t) => {
+      sel.value = t || "";
+      chain.setType(t);
+      if (t) knob.set(chain.p1, false);
+      relabel();
+    };
+    const cycle = () => {
+      const keys = Object.keys(FX_TYPES);
+      setType(keys[keys.indexOf(chain.type) + 1] || keys[0]);
+    };
+    const toggle = () => { chain.setEnabled(!chain.enabled); relabel(); };
+    btn.addEventListener("click", () => { if (chain.type) toggle(); });
+    sel.addEventListener("change", () => setType(sel.value || null));
+    return { chain, knob, btn, sel, setType, cycle, toggle, relabel };
+  });
+
+  const rst = () => { unit.reset(); for (const s of slots) s.knob.set(s.chain.p1, false); };
+  q(".u-rstb").addEventListener("click", rst);
+
+  fxUIs[n - 1] = { unit, slots, dwKnob, rst };
+}
+
+// ---- master control panel ----
+function setQuantUI() {
+  const on = engine.quantize > 0;
+  $("#snapBtn").classList.toggle("on", on);
+  const qb = $("#quantBtn");
+  qb.textContent = on ? `QUANT ${engine.quantize}` : "QUANT";
+  qb.classList.toggle("on", on);
+}
+function toggleSnap() {
+  engine.quantize = engine.quantize > 0 ? 0 : 4;
+  setQuantUI();
+}
+function cycleQuant() {
+  const seq = [1, 2, 4, 8];
+  const i = seq.indexOf(engine.quantize);
+  engine.quantize = i < 0 ? 1 : seq[(i + 1) % 4];
+  setQuantUI();
+}
+function toggleQuantize() { toggleSnap(); }
+
+function clockDeck() {
+  if (mclock.auto) {
+    const s = decks.find((d) => d.deck.master && d.deck.bpm)
+      || decks.find((d) => d.deck.playing && d.deck.bpm)
+      || decks.find((d) => d.deck.bpm);
+    return s ? s.deck : null;
   }
-  const relabel = () => {
-    const F = FX_TYPES[chain.type];
-    knobs.p1.el.querySelector(".knob-label").textContent = F ? F.p1 : "P1";
-    knobs.p2.el.querySelector(".knob-label").textContent = F ? F.p2 : "P2";
-    if (F) { knobs.p1.set(F.d[0], false); knobs.p2.set(F.d[1], false); }
-  };
-  const setType = (t) => { sel.value = t || ""; chain.setType(t); relabel(); };
-  const cycle = () => {
-    const keys = Object.keys(FX_TYPES);
-    setType(keys[keys.indexOf(chain.type) + 1] || keys[0]);
-  };
-  const setOn = (on) => { chain.setEnabled(on); onB.classList.toggle("on", on); };
-  onB.addEventListener("click", () => setOn(!chain.enabled));
-  sel.addEventListener("change", () => setType(sel.value || null));
-  const slot = { name, chain, ui: { el, onB, sel, knobs }, setType, cycle, setOn };
-  fxSlots.push(slot);
-  return slot;
+  const d = decks[mclock.idx] && decks[mclock.idx].deck;
+  return d && d.bpm ? d : null;
 }
+function masterTempo() {
+  const d = clockDeck();
+  return d ? d.bpm * d.tempo : 0;
+}
+function wireMasterControl() {
+  $("#snapBtn").addEventListener("click", toggleSnap);
+  $("#quantBtn").addEventListener("click", cycleQuant);
+  $("#linkBtn").addEventListener("click", (e) => {
+    mixer.linked = !mixer.linked;
+    e.target.classList.toggle("on", mixer.linked);
+  });
+  $("#autoBtn").addEventListener("click", () => {
+    mclock.auto = true;
+    $("#autoBtn").classList.add("on");
+    $("#mclockBtn").classList.remove("on");
+    $("#mTempo").classList.remove("manual");
+  });
+  $("#mclockBtn").addEventListener("click", () => {
+    mclock.auto = false;
+    mclock.idx = focused;
+    $("#autoBtn").classList.remove("on");
+    $("#mclockBtn").classList.add("on");
+    $("#mTempo").classList.add("manual");
+  });
+  const mt = $("#mTempo");
+  let drag = null;
+  mt.addEventListener("pointerdown", (e) => {
+    drag = { y: e.clientY, t: masterTempo() };
+    mt.setPointerCapture(e.pointerId);
+  });
+  mt.addEventListener("pointermove", (e) => {
+    if (!drag || !drag.t) return;
+    const nt = clamp(drag.t + (drag.y - e.clientY) * 0.05, 40, 250);
+    const d = clockDeck();
+    if (!d || !d.bpm) return;
+    setTempoBoth(d, clamp(nt / d.bpm - 1, -0.08, 0.08));
+  });
+  window.addEventListener("pointerup", () => (drag = null));
 
-function buildFxRack() {
-  const rack = $("#fxrack");
-  fxSlotUI(rack, "DECK A", decks[0].deck.fx);
-  fxSlotUI(rack, "DECK B", decks[1].deck.fx);
-  fxSlotUI(rack, "MASTER 1", engine.masterFx[0]);
-  fxSlotUI(rack, "MASTER 2", engine.masterFx[1]);
+  const main = makeKnob({ label: "MAIN", value: 0.85, bipolar: false, onInput: (v) => engine.setMasterVolume(v) });
+  $("#mainKnob").appendChild(main.el);
+  engine.setMasterVolume(0.85);
+  const lim = $("#limBtn");
+  lim.addEventListener("click", () => {
+    engine.setLimiter(!engine.limiterOn);
+    lim.classList.toggle("on", engine.limiterOn);
+  });
+  setQuantUI();
 }
 
 // ---- tracks / decks ----
@@ -156,11 +339,13 @@ function pickFreeSlot() {
 
 function loadTrack(track, targetIdx = null) {
   const slot = targetIdx != null ? decks[targetIdx] : pickFreeSlot();
-  slot.deck.load(track).catch((e) => {
+  slot.deck.load(track).then(() => {
+    library.noteHistory(track);
+    library.setDeckTrack(slot.deck.idx, track.id);
+  }).catch((e) => {
     console.error("load failed", e);
     slot.els.state.textContent = "LOAD ERROR";
   });
-  library.setDeckTrack(slot.deck.idx, track.id);
 }
 
 function getMaster(excludeIdx) {
@@ -168,6 +353,11 @@ function getMaster(excludeIdx) {
   return (sel.find((d) => d.deck.master) || sel.find((d) => d.deck.playing) || sel[0] || {}).deck || null;
 }
 function doSync(deck) {
+  if (!mclock.auto && masterTempo() && deck.bpm) {
+    setTempoBoth(deck, clamp(masterTempo() / deck.bpm - 1, -0.08, 0.08));
+    deck.synced = true;
+    return;
+  }
   const m = getMaster(deck.idx);
   if (m) deck.syncTo(m);
 }
@@ -178,27 +368,34 @@ const hub = new MidiHub(handleMidi, null);
 initMonitor(hub);
 hub.onStatus = (s) => {
   const el = $("#midiStatus");
-  el.textContent = "MIDI: " + s;
-  el.classList.toggle("ok", /ddj|pioneer/i.test(s));
+  el.textContent = "MIDI " + s;
+  const ok = /ddj|pioneer/i.test(s);
+  el.classList.toggle("ok", ok);
+  el.classList.toggle("err", !ok && s !== "off");
 };
 
 function handleMidi(a, c) {
   if (engine.ctx.state !== "running") engine.resume();
-  const fxm = /^fx(On|Type|Mix|P1|P2)([ABCD])$/.exec(a);
-  if (fxm) {
-    const s = fxSlots["ABCD".indexOf(fxm[2])];
+  const um = /^u([12])\.(?:s([123])\.)?(on|type|mix|p1|p2|dw|rst)$/.exec(a);
+  if (um) {
+    const u = fxUIs[+um[1] - 1];
+    if (!u) return;
+    const what = um[3];
+    if (what === "dw") { u.unit.setDw(c.value); u.dwKnob.set(c.value, false); return; }
+    if (what === "rst") { if (c.pressed !== false) u.rst(); return; }
+    const s = um[2] ? u.slots[+um[2] - 1] : null;
     if (!s) return;
-    switch (fxm[1]) {
-      case "On": s.setOn(!s.chain.enabled); break;
-      case "Type": if (c.pressed !== false) s.cycle(); break;
-      case "Mix": s.chain.setMix(c.value); s.ui.knobs.mix.set(c.value, false); break;
-      case "P1": s.chain.setP1(c.value); s.ui.knobs.p1.set(c.value, false); break;
-      case "P2": s.chain.setP2(c.value); s.ui.knobs.p2.set(c.value, false); break;
+    switch (what) {
+      case "on": if (s.chain.type) s.toggle(); break;
+      case "type": if (c.pressed !== false) s.cycle(); break;
+      case "mix": s.chain.setMix(c.value); break;
+      case "p1": s.chain.setP1(c.value); s.knob.set(c.value, false); s.relabel(); break;
+      case "p2": s.chain.setP2(c.value); break;
     }
     return;
   }
   const d = c.deck >= 0 ? decks[c.deck % 2].deck : null;
-  if (!d && a !== "crossfader" && a !== "xfCurve") return;
+  if (!d && a !== "crossfader") return;
   switch (a) {
     case "play": if (c.pressed !== false) d.toggle(); break;
     case "cue": d.pressCue(c.pressed); break;
@@ -220,9 +417,9 @@ function handleMidi(a, c) {
     case "hi": d.setEq("hi", c.value); mixer.strips[d.idx].knobs.hi.set(c.value); break;
     case "mid": d.setEq("mid", c.value); mixer.strips[d.idx].knobs.mid.set(c.value); break;
     case "low": d.setEq("low", c.value); mixer.strips[d.idx].knobs.low.set(c.value); break;
+    case "filter": d.setFilter(c.value); mixer.strips[d.idx].knobs.fltr.set(c.value); break;
     case "needle": if (d.durSec) d.seekSec(c.value * d.durSec); break;
     case "crossfader": mixer.xf = c.value; if (mixer.xfFader) mixer.xfFader.set(c.value); applyMixer(); break;
-    case "xfAssign": if (c.pressed) { mixer.assign[d.idx] = c.index === 2 ? "free" : "xf"; applyMixer(); } break;
     case "jogTick": {
       const dv = c.value > 64 ? c.value - 128 : c.value;
       d.bendStart(dv >= 0 ? 0.5 : -0.5);
@@ -251,17 +448,16 @@ function ledSync() {
   setLed(0, "quantize", engine.quantize > 0);
 }
 
-function toggleQuantize() {
-  engine.quantize = engine.quantize > 0 ? 0 : 4;
-  const b = $("#qBtn");
-  b.textContent = `Q:${engine.quantize || "off"}`;
-  b.classList.toggle("on", engine.quantize > 0);
-}
-
 // ---- frame loop ----
 let masterMeter = null;
+let tickN = 0;
 function frame() {
-  for (const { deck, scope } of decks) { deck.tick(); scope.draw(); }
+  for (const { deck, scope, ruler, mod } of decks) {
+    deck.tick();
+    scope.draw();
+    ruler.draw();
+    mod.parentElement.classList.toggle("playing", deck.playing);
+  }
   for (const s of mixer.strips) {
     if (!s) continue;
     s.meter.setPeak(s.deck.meterPeak());
@@ -273,8 +469,19 @@ function frame() {
       s.keyEl.style.color = cam ? camelotColor(cam) : "#555";
     }
   }
-  masterMeter.setPeak(engine.masterPeak());
-  for (const s of fxSlots) s.ui.onB.classList.toggle("on", s.chain.enabled);
+  if (masterMeter) masterMeter.setPeak(engine.masterPeak());
+  for (const u of fxUIs) {
+    if (!u) continue;
+    for (const s of u.slots) s.relabel();
+  }
+  const mt = masterTempo();
+  const mtEl = $("#mTempo");
+  const txt = mt ? mt.toFixed(2) : "––.––";
+  if (mtEl.textContent !== txt) mtEl.textContent = txt;
+  if (++tickN % 30 === 0) {
+    $("#clock").textContent = new Date().toTimeString().slice(0, 5);
+    $("#audioInd").classList.toggle("ok", engine.ctx.state === "running");
+  }
   ledSync();
   requestAnimationFrame(frame);
 }
@@ -284,34 +491,45 @@ function frame() {
   buildDeck(0, "A", "#deckslotA");
   buildDeck(1, "B", "#deckslotB");
   await Promise.all(decks.map((d) => d.deck.init()));
-  buildFxRack();
+  buildUnit(1, "#unit1");
+  buildUnit(2, "#unit2");
   try {
-  buildStrip(0, "A");
-  buildStrip(1, "B");  mixer.xfFader = makeHFader({ min: 0, max: 1, value: 0.5, onInput: (v) => { mixer.xf = v; applyMixer(); } });
-  $("#xfader").appendChild(mixer.xfFader.el);
-  applyMixer();
-  masterMeter = makeMeter($("#masterMeter"), false);
+    buildStrip(0, "A");
+    buildStrip(1, "B");
+    decks[0].deck.route = 0;
+    decks[1].deck.route = 1;
+    applyFxRouting();
+    mixer.xfFader = makeHFader({ min: 0, max: 1, value: 0.5, onInput: (v) => { mixer.xf = v; applyMixer(); } });
+    $("#xfader").appendChild(mixer.xfFader.el);
+    applyMixer();
+    masterMeter = makeMeter($("#masterMeter"), false);
 
-  engine.setMasterVolume(+$("#masterVol").value);
-  engine.setCueLevel(+$("#cueLevel").value);
-  $("#masterVol").addEventListener("input", (e) => engine.setMasterVolume(+e.target.value));
-  $("#cueLevel").addEventListener("input", (e) => engine.setCueLevel(+e.target.value));
+    const cueKnob = makeKnob({ label: "CUE", value: 0.7, bipolar: false, onInput: (v) => engine.setCueLevel(v) });
+    $("#cueKnob").appendChild(cueKnob.el);
+    engine.setCueLevel(0.7);
+    wireMasterControl();
 
-  try {
-    const devs = await Promise.race([
-      engine.listOutputs(),
-      new Promise((_, rej) => setTimeout(() => rej(new Error("enumerate timeout")), 3000)),
-    ]);
-    const opts = '<option value="">System default</option>' +
-      devs.map((d, i) => `<option value="${d.deviceId}">${d.label || "output " + (i + 1)}</option>`).join("");
-    $("#masterOut").innerHTML = opts;
-    $("#cueOut").innerHTML = opts;
-    $("#masterOut").addEventListener("change", (e) => engine.setMasterSink(e.target.value));
-    $("#cueOut").addEventListener("change", (e) => engine.setCueSink(e.target.value));
-  } catch (e) { console.warn("device enum failed", e); }
+    try {
+      const devs = await Promise.race([
+        engine.listOutputs(),
+        new Promise((_, rej) => setTimeout(() => rej(new Error("enumerate timeout")), 3000)),
+      ]);
+      const opts = '<option value="">System default</option>' +
+        devs.map((d, i) => `<option value="${d.deviceId}">${d.label || "output " + (i + 1)}</option>`).join("");
+      $("#masterOut").innerHTML = opts;
+      $("#cueOut").innerHTML = opts;
+      $("#masterOut").addEventListener("change", (e) => engine.setMasterSink(e.target.value));
+      $("#cueOut").addEventListener("change", (e) => engine.setCueSink(e.target.value));
+    } catch (e) { console.warn("device enum failed", e); }
 
-  library.load().catch((e) => console.error(e));
-  hub.init();
+    $("#monBtn").addEventListener("click", () => initMonitor.toggle && initMonitor.toggle());
+    $("#fsBtn").addEventListener("click", () => {
+      if (document.fullscreenElement) document.exitFullscreen();
+      else document.documentElement.requestFullscreen().catch(() => {});
+    });
+
+    library.load().catch((e) => console.error(e));
+    hub.init();
   } catch (e) {
     window.__errs.push("BOOT: " + (e && e.stack || e));
     console.error("boot error", e);
@@ -319,6 +537,7 @@ function frame() {
 
   window.addEventListener("pointerdown", () => engine.resume());
   engine.resume();
+  $("#clock").textContent = new Date().toTimeString().slice(0, 5);
   window.addEventListener("keydown", (e) => {
     const t = e.target.tagName;
     if (t === "INPUT" || t === "SELECT" || t === "TEXTAREA") return;

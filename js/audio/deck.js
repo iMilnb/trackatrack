@@ -1,6 +1,5 @@
 import { clamp, fmtTime, parseKey, camelotColor } from "../util.js";
 import { audioURL } from "../server-api.js";
-import { FxChain } from "./fx.js";
 import { analyzeTrack } from "../analysis/analyze.js";
 
 const LOOP_SIZES = [0.5, 1, 2, 4, 8, 16, 32];
@@ -36,7 +35,7 @@ export class Deck {
     this.loop = { on: false, start: 0, end: 0, beats: 0 };
     this.zoomBeats = 32;
     this.pfl = false;
-    this.fx = new FxChain(engine.ctx); // post-EQ, pre-fader (PFL taps stay pre-FX)
+    this.route = null; // FxUnit index when FX1/FX2 assigned on the mixer strip
     this._onLoaded = null;
     els.letter.textContent = letter;
   }
@@ -56,11 +55,15 @@ export class Deck {
     this.lo = ctx.createBiquadFilter(); this.lo.type = "lowshelf"; this.lo.frequency.value = 220;
     this.mid = ctx.createBiquadFilter(); this.mid.type = "peaking"; this.mid.frequency.value = 1100; this.mid.Q.value = 0.9;
     this.hi = ctx.createBiquadFilter(); this.hi.type = "highshelf"; this.hi.frequency.value = 3500;
+    this.fltLo = ctx.createBiquadFilter(); this.fltLo.type = "lowpass"; this.fltLo.frequency.value = 21000;
+    this.fltHi = ctx.createBiquadFilter(); this.fltHi.type = "highpass"; this.fltHi.frequency.value = 20;
     this.preFader = ctx.createGain();
     this.vol = ctx.createGain(); this.vol.gain.value = 0; // xf/fader owned by mixer
-    this.node.connect(this.trim).connect(this.lo).connect(this.mid).connect(this.hi).connect(this.preFader);
-    this.preFader.connect(this.fx.in);
-    this.fx.out.connect(this.vol).connect(this.engine.masterVol);
+    this.node.connect(this.trim).connect(this.lo).connect(this.mid).connect(this.hi)
+      .connect(this.fltLo).connect(this.fltHi).connect(this.preFader);
+    this.fxIn = ctx.createGain(); // FX-unit routing point (reconnected by applyFxRouting)
+    this.preFader.connect(this.fxIn);
+    this.fxIn.connect(this.vol).connect(this.engine.masterVol);
     this.pflGain = ctx.createGain(); this.pflGain.gain.value = 0;
     this.preFader.connect(this.pflGain).connect(this.engine.cueDest);
     this.meter = ctx.createAnalyser(); this.meter.fftSize = 1024;

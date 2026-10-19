@@ -11,8 +11,11 @@ export const BEATLOOP_SIZES = [0.5, 1, 2, 4, 8, 16, 32, 64];
 export const ACTION_NAMES = [
   "play", "cue", "sync", "shift", "load", "reverse", "quantize", "keylock", "slip", "vinyl",
   "loopIn", "loopOut", "loopExit", "loopHalve", "loopDouble", "autoLoop", "beatloop",
-  "tempo", "vol", "gain", "hi", "mid", "low", "needle", "jogTick", "crossfader", "xfAssign",
-  ...["A", "B", "C", "D"].flatMap((L) => [`fxOn${L}`, `fxType${L}`, `fxMix${L}`, `fxP1${L}`, `fxP2${L}`]),
+  "tempo", "vol", "gain", "hi", "mid", "low", "filter", "needle", "jogTick", "crossfader",
+  ...[1, 2].flatMap((u) => [
+    `u${u}.dw`, `u${u}.rst`,
+    ...[1, 2, 3].flatMap((s) => [`u${u}.s${s}.on`, `u${u}.s${s}.type`, `u${u}.s${s}.mix`, `u${u}.s${s}.p1`, `u${u}.s${s}.p2`]),
+  ]),
 ];
 
 export class MidiHub {
