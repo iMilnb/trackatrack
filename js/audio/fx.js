@@ -142,3 +142,39 @@ export class FxChain {
     return buf;
   }
 }
+
+/** Traktor-style FX Unit: three FxChain slots in series + unit-level Dry/Wet crossfade. */
+export class FxUnit {
+  constructor(ctx) {
+    this.ctx = ctx;
+    this.in = ctx.createGain();
+    this.out = ctx.createGain();
+    this.dry = ctx.createGain();
+    this.wet = ctx.createGain();
+    this.in.connect(this.dry).connect(this.out);
+    this.slots = [new FxChain(ctx), new FxChain(ctx), new FxChain(ctx)];
+    this.in.connect(this.slots[0].in);
+    this.slots[0].out.connect(this.slots[1].in);
+    this.slots[1].out.connect(this.slots[2].in);
+    this.slots[2].out.connect(this.wet).connect(this.out);
+    this.dw = 0.5;
+    this._applyDw();
+  }
+
+  setDw(v) { this.dw = v; this._applyDw(); }
+  _applyDw() {
+    const t = this.ctx.currentTime, a = (Math.PI / 2) * (1 - this.dw);
+    this.dry.gain.setTargetAtTime(Math.cos(a), t, 0.008);
+    this.wet.gain.setTargetAtTime(Math.sin(a), t, 0.008);
+  }
+
+  /** Reset all slot knobs to their effect defaults (RST). */
+  reset() {
+    for (const s of this.slots) {
+      const F = FX_TYPES[s.type];
+      if (!F) continue;
+      s.setP1(F.d[0]);
+      s.setP2(F.d[1]);
+    }
+  }
+}

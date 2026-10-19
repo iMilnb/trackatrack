@@ -289,6 +289,22 @@ export class Deck {
     const node = kind === "low" ? this.lo : kind === "mid" ? this.mid : this.hi;
     node.gain.value = db;
   }
+  /** Mixer FLTR knob: CCW = lowpass sweep, CW = highpass sweep, center = bypass. */
+  setFilter(v) {
+    const t = this.engine.ctx.currentTime;
+    if (Math.abs(v - 0.5) < 0.015) {
+      this.fltLo.frequency.setTargetAtTime(21000, t, 0.01);
+      this.fltHi.frequency.setTargetAtTime(20, t, 0.01);
+      return;
+    }
+    if (v < 0.5) {
+      this.fltLo.frequency.setTargetAtTime(120 * Math.pow(21000 / 120, v * 2), t, 0.01);
+      this.fltHi.frequency.setTargetAtTime(20, t, 0.01);
+    } else {
+      this.fltLo.frequency.setTargetAtTime(21000, t, 0.01);
+      this.fltHi.frequency.setTargetAtTime(20 * Math.pow(2500 / 20, (v - 0.5) * 2), t, 0.01);
+    }
+  }
   setPfl(on) {
     this.pfl = on;
     this.pflGain.gain.setTargetAtTime(on ? 1 : 0, this.engine.ctx.currentTime, 0.01);
@@ -324,9 +340,7 @@ export class Deck {
       b.classList.toggle("on", this.loop.on && this.loop.beats === +b.dataset.n);
     }
     e.lin.classList.toggle("on", this.loop.on && this.loop.beats === 0 && this.loop.start > 0);
-    e.loopInd.textContent = this.loop.on
-      ? (this.loop.beats ? `${this.loop.beats < 1 ? "½" : this.loop.beats}` : "m")
-      : "";
+    e.loopInd.classList.toggle("on", this.loop.on);
     if (this.durSec) {
       const rem = this.durSec - this.posSec;
       e.remain.textContent = `-${fmtTime(rem)}`;

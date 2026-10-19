@@ -1,6 +1,7 @@
-import { FxChain } from "./fx.js";
+import { FxUnit } from "./fx.js";
 
-/** Master audio graph: deck outputs -> master FX x2 -> limiter -> meter -> output; separate cue bus for PFL. */
+/** Master audio graph: deck outputs -> limiter -> meter -> output; separate cue bus for PFL.
+ *  Two Traktor-style FX Units live at channel level: routed per mixer-channel assignment. */
 export class Engine {
   constructor() {
     this.ctx = new AudioContext({ latencyHint: "interactive" });
@@ -17,10 +18,9 @@ export class Engine {
     this.limiter.release.value = 0.25;
     this.masterAnalyser = ctx.createAnalyser();
     this.masterAnalyser.fftSize = 1024;
-    this.masterFx = [new FxChain(ctx), new FxChain(ctx)]; // serial master FX units
-    this.masterVol.connect(this.masterFx[0].in);
-    this.masterFx[0].out.connect(this.masterFx[1].in);
-    this.masterFx[1].out.connect(this.limiter).connect(this.masterAnalyser).connect(ctx.destination);
+    this.limiterOn = true;
+    this.masterVol.connect(this.limiter).connect(this.masterAnalyser).connect(ctx.destination);
+    this.units = [new FxUnit(ctx), new FxUnit(ctx)]; // FX Unit 1 / 2 (global section), assignable to mixer channels
     this._buf = new Float32Array(this.masterAnalyser.fftSize);
 
     // cue bus: master-context MediaStream -> cue context (own output device)
@@ -42,6 +42,14 @@ export class Engine {
 
   setMasterVolume(v) { this.masterVol.gain.value = v * v * 1.4; }
   setCueLevel(v) { this.cueGain.gain.value = v * v * 1.6; }
+
+  setLimiter(on) {
+    this.limiterOn = on;
+    this.masterVol.disconnect();
+    this.limiter.disconnect();
+    if (on) this.masterVol.connect(this.limiter).connect(this.masterAnalyser);
+    else this.masterVol.connect(this.masterAnalyser);
+  }
 
   async setMasterSink(id) {
     try { if (this.ctx.setSinkId) await this.ctx.setSinkId(id); } catch (e) { console.warn("master sink", e); }

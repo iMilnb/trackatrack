@@ -6,75 +6,127 @@
 <link rel="stylesheet" href="css/app.css">
 </head>
 <body>
-<div id="topbar">
+
+<!-- ============ Header ============ -->
+<div id="header">
   <div class="logo">TRACKA<span>TRACK</span></div>
+  <span id="midiStatus" class="hd-ind" title="MIDI status">MIDI</span>
+  <span id="audioInd" class="hd-ind" title="Audio engine">AUDIO</span>
   <span class="grow"></span>
+  <canvas id="masterMeter" class="hmeter" title="Master out"></canvas>
+  <span id="clock">--:--</span>
+  <span class="sepr"></span>
   <label class="tb">OUT <select id="masterOut"></select></label>
-  <label class="tb volbox">MIX <input id="masterVol" type="range" min="0" max="1" step="0.01" value="0.85"></label>
-  <canvas id="masterMeter" class="hmeter"></canvas>
-  <span class="tb sepr"></span>
   <label class="tb">PHONES <select id="cueOut"></select></label>
-  <label class="tb volbox">CUE <input id="cueLevel" type="range" min="0" max="1" step="0.01" value="0.7"></label>
-  <button id="qBtn" class="btn tb on" title="Quantize (beatloop/cue snap)">Q:4</button>
-  <span id="midiStatus" class="tb">MIDI: –</span>
-  <button id="monBtn" class="btn tb">MON</button>
+  <button id="monBtn" class="btn tb" title="MIDI monitor / learn">MON</button>
+  <button id="fsBtn" class="btn tb" title="Fullscreen">⛶</button>
 </div>
 
+<!-- ============ Global section: FX Unit 1 | Master Control | FX Unit 2 ============ -->
+<div id="globalsec">
+  <div class="fx-tab">FX</div>
+  <div class="fxunit" id="unit1"></div>
+  <div id="mctrl">
+    <div class="mc-left">
+      <button id="snapBtn" class="btn mc-b" title="Snap controls to beat grid">SNAP</button>
+      <button id="quantBtn" class="btn mc-b" title="Quantize value — click to cycle">QUANT</button>
+      <button id="linkBtn" class="btn mc-b" title="Link deck tempos">LINK</button>
+    </div>
+    <div class="mc-mid">
+      <div id="mTempo" class="mc-tempo" title="Master clock — drag vertically to adjust">120.00</div>
+      <div class="mc-clk">
+        <button id="autoBtn" class="btn mc-b on" title="Master clock follows playing deck">AUTO</button>
+        <button id="mclockBtn" class="btn mc-b" title="Master clock held by MASTER deck">MASTER</button>
+      </div>
+    </div>
+    <div class="mc-right">
+      <div id="mainKnob"></div>
+      <button id="limBtn" class="btn mc-b lim on" title="Master limiter">LIMITER</button>
+    </div>
+  </div>
+  <div class="fxunit" id="unit2"></div>
+  <div class="fx-tab">FX</div>
+</div>
+
+<!-- ============ Decks + Mixer ============ -->
 <div id="decks">
   <div class="deckslot" id="deckslotA"></div>
   <div id="mixer">
     <div id="strips"></div>
-    <div id="xfrow"><span class="xf-label">XF</span><div id="xfader"></div></div>
+    <div id="xfrow">
+      <span class="xf-lab">A</span>
+      <div id="xfader"></div>
+      <span class="xf-lab">B</span>
+      <span class="grow"></span>
+      <div id="cueKnob"></div>
+    </div>
   </div>
   <div class="deckslot" id="deckslotB"></div>
 </div>
 
-<div id="fxrack"></div>
-
+<!-- ============ Browser ============ -->
 <div id="library"></div>
+
+<template id="unitTpl">
+  <div class="fxunit">
+    <div class="u-num">1:</div>
+    <div class="u-dw"></div>
+    <div class="u-sels"></div>
+    <div class="u-param"></div>
+    <div class="u-rst"><button class="btn u-rstb" title="Reset all unit parameters">RST</button></div>
+  </div>
+</template>
 
 <template id="deckTpl">
   <div class="deckmod">
-    <div class="deck-h">
-      <span class="d-title">–</span><span class="d-artist"></span>
-      <span class="grow"></span>
-      <span class="d-state"></span>
-      <span class="d-remain">--:--</span><span class="d-dur"></span>
-      <span class="d-bpm">–</span><span class="d-key"></span><span class="d-letter">?</span>
+    <div class="d-info">
+      <div class="d-meta">
+        <div class="d-title">–</div>
+        <div class="d-artist"></div>
+        <div class="d-state"></div>
+      </div>
+      <div class="grow"></div>
+      <div class="d-times"><span class="d-remain">--:--</span><span class="d-dur">--:--</span></div>
+      <div class="d-tempos"><span class="d-bpm">–</span><span class="t-pct">+0.0%</span><span class="d-trackbpm">–</span></div>
+      <div class="d-key"></div>
+      <div class="d-letter">?</div>
+    </div>
+    <div class="d-row1">
+      <button class="btn sync" title="Sync to master clock">SYNC</button>
+      <button class="btn master" title="Make this deck the master">MASTER</button>
+      <canvas class="d-ruler" title="Beat grid — drag to shift"></canvas>
+      <button class="btn prev" title="Load previous track">◀◀</button>
+      <button class="btn next" title="Load next track">▶▶</button>
     </div>
     <div class="deck-main"><canvas class="d-detail"></canvas></div>
     <div class="deck-ov">
-      <button class="btn to-cue" title="Jump to cue">⇤</button>
+      <button class="btn to-cue" title="Jump to start position">⇤</button>
       <canvas class="d-ov"></canvas>
-      <span class="d-loopind"></span>
+      <button class="btn reveal" title="Show track in browser">♪</button>
       <span class="zoom"><button class="btn z-out" title="Zoom out">−</button><span class="z-lbl">32</span><button class="btn z-in" title="Zoom in">+</button></span>
     </div>
     <div class="deck-t">
       <button class="btn play" title="Play/Pause (Space)">▶</button>
       <button class="btn cue">CUE</button>
       <button class="btn cup">CUP</button>
-      <button class="btn flx">FLX</button>
-      <button class="btn rev">REV</button>
+      <span class="tsep"></span>
+      <button class="btn flx" title="Slip mode">FLX</button>
+      <button class="btn rev" title="Reverse">REV</button>
       <span class="tsep"></span>
       <span class="loopbtns">
-        <button class="btn lb" data-n="0.5">½</button>
+        <button class="btn lhalf" title="Halve loop">‹</button>
         <button class="btn lb" data-n="1">1</button>
         <button class="btn lb" data-n="2">2</button>
         <button class="btn lb" data-n="4">4</button>
         <button class="btn lb" data-n="8">8</button>
-        <button class="btn lb" data-n="16">16</button>
-        <button class="btn lb" data-n="32">32</button>
-        <button class="btn lin">IN</button>
-        <button class="btn lout">OUT</button>
+        <button class="btn ldbl" title="Double loop">›</button>
       </span>
-    </div>
-    <div class="deck-s">
-      <button class="btn sync">SYNC</button>
-      <button class="btn master">MASTER</button>
-      <span class="gridshift">GRID <button class="btn g-back" title="shift grid -1 beat">◀</button><button class="btn g-fwd" title="shift grid +1 beat">▶</button></span>
+      <span class="tsep"></span>
+      <button class="btn lin">IN</button>
+      <button class="btn lout">OUT</button>
+      <span class="btn lact d-loopind">ACTIVE</span>
     </div>
     <div class="deck-rail">
-      <div class="t-pct">+0.0%</div>
       <div class="tempo"></div>
       <div class="vlabel">TEMPO</div>
     </div>
@@ -85,11 +137,16 @@
   <div class="strip">
     <div class="s-letter">A</div>
     <div class="s-knobs"></div>
-    <div class="s-low">
-      <canvas class="s-meter"></canvas>
-      <div class="s-vol"></div>
+    <div class="s-fxbtns">
+      <button class="btn sfx1" title="Route this channel to FX Unit 1">1</button>
+      <button class="btn sfx2" title="Route this channel to FX Unit 2">2</button>
+      <span class="sfx-label">FX</span>
     </div>
-    <button class="btn pfl" title="Pre-fader listen to phones">PFL</button>
+    <div class="s-low">
+      <div class="s-vol"></div>
+      <canvas class="s-meter"></canvas>
+    </div>
+    <button class="btn pfl" title="Cue this channel in headphones">🎧</button>
     <div class="s-key"></div>
   </div>
 </template>
