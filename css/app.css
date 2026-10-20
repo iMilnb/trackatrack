@@ -340,3 +340,19 @@ body.maxb #globalsec, body.maxb #decks { display: none; }
 body.maxb #library { flex: 1 1 auto; }
 
 #unit1.hidden, #unit2.hidden { display: none; }
+
+/* ============ WP3: hotcues, deck focus/compact, out-of-sync, strip key ============ */
+.d-hcs { display: flex; gap: 3px; padding: 3px 6px 0; }
+.d-hcs .btn { flex: 1 1 0; min-width: 0; font-size: 9px; padding: 4px 0; color: #77797f; }
+.d-hcs .btn.set { background: var(--hc); border-color: var(--hc); color: #0b0b0f; font-weight: 700; box-shadow: 0 0 6px rgba(255,255,255,.12); }
+.d-bpm.warn { color: #ffb648 !important; }
+.deckmod.focused { outline: 1px solid rgba(90,167,224,.5); outline-offset: -1px; }
+.deckmod.focused .d-letter { color: #14100a; background: #e08a2e; border-color: #e08a2e; }
+.strip.focused .s-letter { color: #14100a; background: #e08a2e; }
+.deckmod.d-compact .deck-main { display: none; }
+.deckmod.d-compact .deck-ov { flex: 1 1 auto; }
+.s-keyrow { display: flex; align-items: center; gap: 4px; padding-top: 2px; }
+.s-lock { font-size: 8px; padding: 3px 4px; color: #8b8d93; }
+.s-lock.on { color: #0d0e10; background: #5aa7e0; border-color: #5aa7e0; }
+.s-keyk .knob { transform: scale(.7); transform-origin: top left; }
+#deckslotA .deckmod.focused .d-letter, #deckslotB .deckmod.focused .d-letter { color: #14100a !important; background: #e08a2e; }

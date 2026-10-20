@@ -1,4 +1,5 @@
 import { Deck } from "./audio/deck.js";
+import { HC_COLORS } from "./audio/deck.js";
 import { DeckScope } from "./waveform.js";
 import { Engine } from "./audio/engine.js";
 import { FX_TYPES } from "./audio/fx.js";
@@ -115,6 +116,7 @@ function buildDeck(i, letter, slotSel) {
     flx: q(".flx"), rev: q(".rev"), sync: q(".sync"), master: q(".master"),
     loopBtns: [...mod.querySelectorAll(".lb")], lin: q(".lin"), lout: q(".lout"),
     loopInd: q(".d-loopind"), tPct: q(".t-pct"),
+    hcs: [...mod.querySelectorAll(".d-hcs .hc")],
   };
   const deck = new Deck(i, letter, engine, els);
   const scope = new DeckScope(deck, q(".d-detail"), q(".d-ov"), q(".z-lbl"));
@@ -140,6 +142,16 @@ function buildDeck(i, letter, slotSel) {
   for (const b of els.loopBtns) b.addEventListener("click", () => deck.loopSetBeats(+b.dataset.n));
   els.lin.addEventListener("click", () => deck.loopIn());
   els.lout.addEventListener("click", () => deck.loopOut());
+  els.loopInd.addEventListener("click", () => deck.loopToggle());
+  for (const b of els.hcs) {
+    const hi = +b.dataset.h;
+    b.style.setProperty("--hc", HC_COLORS[hi]);
+    b.addEventListener("pointerdown", (e) => { if (e.button !== 2) deck.hotcuePress(hi); });
+    window.addEventListener("pointerup", () => deck.hotcueRelease(hi));
+    b.addEventListener("contextmenu", (e) => { e.preventDefault(); deck.hotcueClear(hi); });
+  }
+  deck._mref = () => masterTempo();
+  q(".d-info").addEventListener("dblclick", () => mod.classList.toggle("d-compact"));
   q(".lhalf").addEventListener("click", () => deck.loopHalve());
   q(".ldbl").addEventListener("click", () => deck.loopDouble());
   q(".z-in").addEventListener("click", () => scope.zoom(2));
@@ -188,6 +200,13 @@ function buildStrip(i, letter) {
     deck.setPfl(!deck.pfl);
     pfl.classList.toggle("on", deck.pfl);
   });
+  const lock = q(".s-lock");
+  lock.addEventListener("click", () => {
+    deck.keyLock = !deck.keyLock;
+    lock.classList.toggle("on", deck.keyLock);
+  });
+  const keyk = makeKnob({ label: "KEY", value: 0.5, onInput: (v) => deck.setTranspose((v - 0.5) * 12) });
+  q(".s-keyk").appendChild(keyk.el);
   mixer.strips[i] = { el, deck, knobs, vol, meter, pfl, sfx1, sfx2, keyEl: q(".s-key"), lastKey: "" };
 }
 
@@ -624,6 +643,13 @@ function frame() {
     scope.draw();
     ruler.draw();
     mod.parentElement.classList.toggle("playing", deck.playing);
+  }
+  if (frame._lf === undefined || frame._lf !== focused) {
+    frame._lf = focused;
+    for (let i = 0; i < decks.length; i++) {
+      decks[i].mod.classList.toggle("focused", i === focused);
+      if (mixer.strips[i]) mixer.strips[i].el.classList.toggle("focused", i === focused);
+    }
   }
   for (const s of mixer.strips) {
     if (!s) continue;

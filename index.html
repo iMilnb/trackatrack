@@ -185,6 +185,16 @@
       <button class="btn reveal" title="Show track in browser">♪</button>
       <span class="zoom"><button class="btn z-out" title="Zoom out">−</button><span class="z-lbl">32</span><button class="btn z-in" title="Zoom in">+</button></span>
     </div>
+    <div class="d-hcs" title="Hotcue 1-8 — click empty to store, click to jump, hold to audition, right-click to clear">
+      <button class="btn hc" data-h="0">1</button>
+      <button class="btn hc" data-h="1">2</button>
+      <button class="btn hc" data-h="2">3</button>
+      <button class="btn hc" data-h="3">4</button>
+      <button class="btn hc" data-h="4">5</button>
+      <button class="btn hc" data-h="5">6</button>
+      <button class="btn hc" data-h="6">7</button>
+      <button class="btn hc" data-h="7">8</button>
+    </div>
     <div class="deck-t">
       <button class="btn play" title="Play/Pause (Space)">▶</button>
       <button class="btn cue">CUE</button>
@@ -204,7 +214,7 @@
       <span class="tsep"></span>
       <button class="btn lin">IN</button>
       <button class="btn lout">OUT</button>
-      <span class="btn lact d-loopind">ACTIVE</span>
+      <button class="btn lact d-loopind" title="Loop active — toggle loop, press active size to reloop">ACTIVE</button>
     </div>
     <div class="deck-rail">
       <div class="tempo"></div>
@@ -227,7 +237,11 @@
       <canvas class="s-meter"></canvas>
     </div>
     <button class="btn pfl" title="Cue this channel in headphones">🎧</button>
-    <div class="s-key"></div>
+    <div class="s-keyrow">
+      <button class="btn s-lock" title="Key Lock — preserve pitch when tempo changes (browser engine: limited)">LOCK</button>
+      <div class="s-keyk"></div>
+      <span class="s-key"></span>
+    </div>
   </div>
 </template>
 

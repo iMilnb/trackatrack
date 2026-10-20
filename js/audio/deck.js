@@ -3,6 +3,7 @@ import { audioURL } from "../server-api.js";
 import { analyzeTrack } from "../analysis/analyze.js";
 
 const LOOP_SIZES = [0.5, 1, 2, 4, 8, 16, 32];
+export const HC_COLORS = ["#e6d24f", "#4fd74f", "#4f8fe6", "#e64f4f", "#b04fe6", "#e6944f", "#4fe6d2", "#e64f9a"];
 
 /**
  * One deck: worklet playback of a decoded track + transport, cue, loops,
@@ -22,6 +23,10 @@ export class Deck {
     this.bendAmt = 0;
     this.reversed = false;
     this.flx = false;
+    this.hc = new Array(8).fill(null); // hotcue 1-8: sample position or null
+    this.transpose = 0; // semitones
+    this.keyLock = false;
+    this._mref = null; // () => master tempo (out-of-sync visual)
     this.synced = false;
     this.master = false;
     this.bpm = null;
@@ -91,7 +96,10 @@ export class Deck {
   get beats() { return this.beatsAt(this.posSec); }
 
   _setPlayParam(p) { this.p.play.setValueAtTime(p ? 1 : 0, this.engine.ctx.currentTime); }
-  _setRateParam() { this.p.rate.setValueAtTime(this.reversed ? -this.rateVal : this.rateVal, this.engine.ctx.currentTime); }
+  _setRateParam() {
+    const rt = this.rateVal * Math.pow(2, this.transpose / 12);
+    this.p.rate.setValueAtTime(this.reversed ? -rt : rt, this.engine.ctx.currentTime);
+  }
 
   async load(track, { autoplay = false } = {}) {
     this.pause();
@@ -106,6 +114,10 @@ export class Deck {
     this._posT = performance.now();
     this.durSec = null;
     this.loop = { on: false, start: 0, end: 0, beats: 0 };
+    this.hc.fill(null);
+    this.transpose = 0;
+    this._slip = null;
+    this._hcSlip = null;
     this.synced = false;
     this._paintStatic();
     const tLoad0 = performance.now();
@@ -188,6 +200,8 @@ export class Deck {
   pressCue(pressed) {
     if (pressed) {
       if (this.playing && this.flx) {
+        // Flux: real timeline keeps advancing (slip), output plays from cue
+        this._slip = { pos: this._pos, t: this.engine.ctx.currentTime, rate: this.rateVal };
         this.seekSec((this.cue || 0) / this.sr);
       } else if (this.playing) {
         if (this.cue == null) this.cue = this._pos;
@@ -198,6 +212,10 @@ export class Deck {
         this._cueHold = true;
         this.play();
       }
+    } else if (this._slip) {
+      const s = this._slip;
+      this._slip = null;
+      this.seekSec((s.pos + (this.engine.ctx.currentTime - s.t) * this.sr * s.rate) / this.sr);
     } else if (this._cueHold) {
       this._cueHold = false;
       this.pause();
@@ -226,12 +244,21 @@ export class Deck {
   }
   loopSetBeats(n) {
     if (!this.spb) return;
-    if (this.loop.on && this.loop.beats === n) return this.loopExit();
+    if (this.loop.on && this.loop.beats === n) {
+      const s = this.loop.start; // RELOOP: exit and resume from the loop start
+      this.loopExit();
+      this.seekSec(s / this.sr);
+      return;
+    };
     const s = this.quantizeSample(this._pos);
     this.loop = { on: true, start: s, end: s + n * this.spb * this.sr, beats: n };
     this._applyLoop();
   }
   loopExit() { this.loop.on = false; this._applyLoop(); }
+  loopToggle() {
+    if (this.loop.on) return this.loopExit();
+    if (this.loop.end > this.loop.start) { this.loop.on = true; this._applyLoop(); }
+  }
   loopIn() {
     if (!this.spb) return;
     this.loop.start = this.quantizeSample(this._pos);
@@ -320,6 +347,32 @@ export class Deck {
     return p;
   }
 
+  // ---- hotcues (Advanced panel CUE page) ----
+  hotcuePress(i) {
+    if (!this.track || !this.durSec) return;
+    const h = this.hc[i];
+    if (h == null) { this.hc[i] = this._pos; this._paintStatic(); return; }
+    if (this.playing) {
+      this._hcSlip = { pos: this._pos, t: this.engine.ctx.currentTime, rate: this.rateVal, flx: this.flx };
+      this._hcT = performance.now();
+    }
+    this.seekSec(h / this.sr);
+  }
+  hotcueRelease(i) {
+    const s = this._hcSlip;
+    this._hcSlip = null;
+    if (!s || this.hc[i] == null) return;
+    if (performance.now() - this._hcT < 260) return; // quick tap = jump and play on
+    if (s.flx) this.seekSec((s.pos + (this.engine.ctx.currentTime - s.t) * this.sr * s.rate) / this.sr);
+    else this.seekSec(s.pos / this.sr);
+  }
+  hotcueClear(i) { this.hc[i] = null; }
+  setTranspose(st) {
+    this.transpose = clamp(Math.round(st), -6, 6);
+    this._setRateParam();
+    this._paintStatic();
+  }
+
   // ---- UI paint ----
   _paintStatic() {
     const e = this.els;
@@ -327,7 +380,12 @@ export class Deck {
     e.title.textContent = t ? t.title : "–";
     e.artist.textContent = t && t.artist && t.artist !== t.title ? t.artist : "";
     const cam = t ? parseKey(t.key) : null;
-    e.key.textContent = cam ? cam.text : (t && t.key ? t.key : "");
+    if (cam && this.transpose) {
+      const n = ((cam.num - 1 + this.transpose) % 12 + 12) % 12 + 1;
+      e.key.textContent = `${n}${cam.minor ? "b" : "m"}`;
+    } else {
+      e.key.textContent = cam ? cam.text : (t && t.key ? t.key : "");
+    }
     e.key.style.color = cam ? camelotColor(cam) : "#666";
     e.bpm.textContent = this.bpm ? this.bpm.toFixed(2) : this.state === "analyzing" ? "…" : "–";
   }
@@ -344,6 +402,11 @@ export class Deck {
     }
     e.lin.classList.toggle("on", this.loop.on && this.loop.beats === 0 && this.loop.start > 0);
     e.loopInd.classList.toggle("on", this.loop.on);
+    if (e.hcs) for (let i = 0; i < 8; i++) e.hcs[i].classList.toggle("set", this.hc[i] != null);
+    const curBpm = this.bpm ? this.bpm * this.rateVal : 0;
+    const mBpm = this._mref ? this._mref() : 0;
+    e.bpm.classList.toggle("warn",
+      !!(mBpm && curBpm && !this.synced && !this.master && Math.abs(curBpm - mBpm) > 0.1));
     if (this.durSec) {
       const rem = this.durSec - this.posSec;
       e.remain.textContent = `-${fmtTime(rem)}`;

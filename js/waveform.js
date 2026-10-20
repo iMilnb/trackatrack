@@ -1,4 +1,6 @@
 /** Canvas renderers for one deck: scrolling detail + full overview. */
+import { HC_COLORS } from "./audio/deck.js";
+
 export class DeckScope {
   constructor(deck, detailCv, ovCv, zoomEl) {
     this.deck = deck;
@@ -166,6 +168,11 @@ export class DeckScope {
       const x0 = (d.loop.start / d.sr / d.durSec) * W, x1 = (d.loop.end / d.sr / d.durSec) * W;
       g.fillStyle = "rgba(255,150,40,0.25)";
       g.fillRect(x0, 0, Math.max(2, x1 - x0), H);
+    }
+    if (d.hc) for (let i = 0; i < 8; i++) {
+      if (d.hc[i] == null) continue;
+      g.fillStyle = HC_COLORS[i];
+      g.fillRect(Math.round((d.hc[i] / d.sr / d.durSec) * W - this.dpr), 0, Math.round(2 * this.dpr), Math.round(7 * this.dpr));
     }
     if (d.cue != null) {
       g.fillStyle = "#ff9c2e";
