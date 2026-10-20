@@ -285,9 +285,18 @@
 
 <script>
 window.__errs = [];
+window.__ptrace = [];
 window.addEventListener("error", (e) => window.__errs.push(e.message + " @" + e.filename + ":" + e.lineno));
 window.addEventListener("unhandledrejection", (e) => window.__errs.push("REJECT: " + ((e.reason && (e.reason.stack || e.reason.message)) || e.reason)));
 setInterval(() => { if (window.__errs.length) document.title = "ERRS: " + window.__errs.slice(-3).join(" | "); }, 1500);
+setInterval(() => {
+  const t = window.__ptrace;
+  for (let i = t.length - 1; i > 0; i--) {
+    if (t[i].inc === "pause" && t[i - 1].inc === "play" && t[i - 1].L === t[i].L && t[i].t - t[i - 1].t < 400) {
+      document.title = "QUICKSTOP " + t[i].L + " via " + t[i].src; return;
+    }
+  }
+}, 1200);
 if (!window.isSecureContext && !/^\d+\.\d+\.\d+\.\d+$/.test(location.hostname) && location.hostname !== "localhost") {
   const b = document.createElement("div");
   b.id = "insecbar";

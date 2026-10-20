@@ -67,7 +67,7 @@ def ws_recv(s):
 
 def main():
     proc = subprocess.Popen(
-        ["google-chrome", "--headless=new", "--no-first-run", "--disable-gpu", "--ignore-certificate-errors",
+        ["google-chrome", "--headless=new", "--no-first-run", "--disable-gpu", "--ignore-certificate-errors", "--autoplay-policy=no-user-gesture-required",
          "--remote-debugging-port=%d" % PORT, "--user-data-dir=/tmp/tjs-cdp-%d" % os.getpid(), "about:blank"],
         stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
     target = None

@@ -85,7 +85,7 @@ export class Deck {
 
   _workletMsg(m) {
     if (m.cmd === "pos") { this._pos = m.v; this._posT = performance.now(); }
-    else if (m.cmd === "ended") { this.playing = false; this._setPlayParam(false); }
+    else if (m.cmd === "ended") { this.playing = false; this.pause("worklet dur=" + (this.durSec == null ? "null" : this.durSec.toFixed(2))); }
     else if (m.cmd === "loaded") { if (this._onLoaded) this._onLoaded(); }
   }
 
@@ -108,7 +108,7 @@ export class Deck {
   }
 
   async load(track, { autoplay = false } = {}) {
-    this.pause();
+    this.pause("load");
     this.track = track;
     this.analysis = null;
     this.state = "loading";
@@ -179,11 +179,15 @@ export class Deck {
 
   play() {
     if (!this.track || !this.durSec) return;
+    if (window.__ptrace) window.__ptrace.push({ L: this.letter, inc: "play", t: performance.now() });
     if (this.posSec >= (this.durSec || 0) - 0.05) this.seekSec(0);
     this.playing = true;
     this._setPlayParam(true);
   }
-  pause() { this.playing = false; this._setPlayParam(false); }
+  pause(src) {
+    if (window.__ptrace) window.__ptrace.push({ L: this.letter, inc: "pause", src: src || "direct", t: performance.now() });
+    this.playing = false; this._setPlayParam(false);
+  }
   toggle() { this.playing ? this.pause() : this.play(); }
   seekSec(s) {
     this._pos = clamp(s, 0, this.durSec || 0) * this.sr;
@@ -210,8 +214,8 @@ export class Deck {
         this._slip = { pos: this._pos, t: this.engine.ctx.currentTime, rate: this.rateVal };
         this.seekSec((this.cue || 0) / this.sr);
       } else if (this.playing) {
-        if (this.cue == null) this.cue = this._pos;
-        this.pause(); this.seekSec(this.cue / this.sr);
+      if (this.cue == null) this.cue = this._pos;
+      this.pause("cue"); this.seekSec(this.cue / this.sr);
       } else {
         if (this.cue == null) this.cue = this._pos;
         this.seekSec(this.cue / this.sr);
