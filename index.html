@@ -297,6 +297,15 @@ setInterval(() => {
     }
   }
 }, 1200);
+let __sent = 0;
+setInterval(() => {
+  const t = window.__ptrace;
+  if (t.length > __sent) {
+    const tail = t.slice(__sent).map((p) => p.L + ":" + p.inc + (p.src ? "(" + p.src + ")" : "") + "@" + p.t.toFixed(0));
+    fetch("/api/log", { method: "POST", body: navigator.userAgent.slice(0, 50) + " | " + tail.join(" ") }).catch(() => {});
+    __sent = t.length;
+  }
+}, 1500);
 if (!window.isSecureContext && !/^\d+\.\d+\.\d+\.\d+$/.test(location.hostname) && location.hostname !== "localhost") {
   const b = document.createElement("div");
   b.id = "insecbar";

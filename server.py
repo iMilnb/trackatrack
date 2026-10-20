@@ -149,6 +149,21 @@ class Handler(SimpleHTTPRequestHandler):
             return self.send_error(404, "no such api")
         return super().do_GET()
 
+    def do_POST(self):
+        path = unquote(self.path.split("?", 1)[0])
+        n = int(self.headers.get("Content-Length") or 0)
+        body = self.rfile.read(n) if n else b""
+        if path == "/api/log":
+            try:
+                with open(os.path.join(os.path.dirname(os.path.abspath(__file__)), "client.log"), "ab") as f:
+                    f.write(("%s %s\n" % (self.log_date_time_string(), body.decode("utf-8", "replace").strip())).encode())
+            except OSError:
+                pass
+            self.send_response(204)
+            self.end_headers()
+            return
+        self.send_error(404)
+
     def send_json(self, obj):
         body = json.dumps(obj, ensure_ascii=False).encode("utf-8")
         self.send_response(200)
