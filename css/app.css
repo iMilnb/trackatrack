@@ -419,3 +419,20 @@ body.maxb #library { flex: 1 1 auto; }
 .pvprog i.on { background: #4fd74f; }
 #pvVol .knob { --ks: 20px; }
 #pvPlay.on { color: #4fd74f; }
+
+/* ============ Short-viewport compaction (real browser windows are <1080px tall) ============ */
+@media (max-height: 1000px) {
+  .strip { gap: 2px; }
+  .strip .s-knobs .knob { --ks: 26px; }
+  .s-low, .s-vol, .s-meter { height: 80px; }
+  .s-kills, .s-mixfx, .s-keyrow { padding-top: 0; }
+  .s-keyk .knob, .s-pank .knob { --ks: 24px; }
+}
+@media (max-height: 830px) {
+  .strip .s-knobs .knob { --ks: 22px; }
+  .strip .s-knobs .knob-label { display: none; }
+  .s-knobs { gap: 0; }
+  .s-mixfx .knob-label { display: none; }
+  .s-low, .s-vol, .s-meter { height: 56px; }
+  .s-letter { font-size: 11px; }
+}
