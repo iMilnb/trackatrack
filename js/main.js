@@ -126,7 +126,16 @@ function buildDeck(i, letter, slotSel) {
   els.tFader = tf;
   q(".tempo").appendChild(tf.el);
 
-  q(".play").addEventListener("click", () => deck.toggle());
+  q(".play").addEventListener("click", (e) => {
+    const now = performance.now();
+    if (window.__ptrace) window.__ptrace.push({ L: letter, inc: "click", src: "d" + e.detail, t: now });
+    if (deck._lastClick && now - deck._lastClick < 300) {
+      if (window.__ptrace) window.__ptrace.push({ L: letter, inc: "skip", t: now });
+      return;
+    }
+    deck._lastClick = now;
+    deck.toggle();
+  });
   q(".cue").addEventListener("pointerdown", () => deck.pressCue(true));
   window.addEventListener("pointerup", () => deck.pressCue(false));
   q(".cup").addEventListener("click", () => deck.pressCup());
@@ -1008,7 +1017,11 @@ function frame() {
   window.addEventListener("keydown", (e) => {
     const t = e.target.tagName;
     if (t === "INPUT" || t === "SELECT" || t === "TEXTAREA") return;
-    if (e.code === "Space") { decks[focused].deck.toggle(); e.preventDefault(); }
+    if (e.code === "Space") {
+      const d = decks[focused].deck;
+      if (window.__ptrace) window.__ptrace.push({ L: d.letter, inc: "key", src: "space", t: performance.now() });
+      d.toggle(); e.preventDefault();
+    }
     else if (e.key === "Enter") library.loadSelected();
     else if (e.key === "ArrowDown") { library.moveSel(1); e.preventDefault(); }
     else if (e.key === "ArrowUp") { library.moveSel(-1); e.preventDefault(); }

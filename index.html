@@ -292,7 +292,10 @@ setInterval(() => { if (window.__errs.length) document.title = "ERRS: " + window
 setInterval(() => {
   const t = window.__ptrace;
   for (let i = t.length - 1; i > 0; i--) {
-    if (t[i].inc === "pause" && t[i - 1].inc === "play" && t[i - 1].L === t[i].L && t[i].t - t[i - 1].t < 400) {
+    if (t[i].inc !== "pause") continue;
+    let j = i - 1;
+    while (j >= 0 && (t[j].L !== t[i].L || (t[j].inc !== "play" && t[j].inc !== "pause"))) j--;
+    if (j >= 0 && t[j].inc === "play" && t[i].t - t[j].t < 400) {
       document.title = "QUICKSTOP " + t[i].L + " via " + t[i].src; return;
     }
   }
