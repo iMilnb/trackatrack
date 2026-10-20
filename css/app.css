@@ -278,3 +278,65 @@ textarea {
   position: fixed; top: 34px; left: 0; right: 0; z-index: 200;
   background: #7a2712; color: #ffe3d9; font-size: 12px; padding: 6px 12px; text-align: center;
 }
+
+/* ============ doc-aligned header LEDs, load meter, prefs modal ============ */
+.hd-ind.b, .hd-ind.ok { color: #9fc6e8; }
+.hd-ind.b::before, .hd-ind.ok::before { background: var(--blue); border-color: var(--blue); box-shadow: 0 0 5px var(--blue); }
+.hd-ind.o { color: #e8c39f; }
+.hd-ind.o::before { background: #e08a2e; border-color: #e08a2e; box-shadow: 0 0 5px #e08a2e; }
+.hd-ind.r { color: #e8a09f; }
+.hd-ind.r::before { background: #d33; border-color: #d33; box-shadow: 0 0 5px #d33; }
+#recInd.rec::before { background: #e01b1b; border-color: #e01b1b; box-shadow: 0 0 6px #e01b1b; }
+#recInd.rec { color: #ffb3b3; }
+.hd-load { display: inline-flex; align-items: center; gap: 5px; font-size: 9px; letter-spacing: 1px; color: var(--dim); }
+.loadbar { width: 64px; height: 8px; background: #17181b; border: 1px solid #3a3d42; border-radius: 2px; overflow: hidden; display: inline-block; }
+.loadbar i { display: block; height: 100%; width: 0%; background: var(--green); transition: width .4s; }
+.loadbar i.hot { background: var(--orange); }
+.loadbar i.max { background: #d33; }
+.hd-load em { font-style: normal; color: #cfd2d8; min-width: 26px; }
+
+/* ============ Global section: end selectors + recorder panels ============ */
+.sel-col { display: flex; flex-direction: column; justify-content: center; gap: 6px; padding: 0 4px; border-right: 1px solid #26272b; }
+.sel-col:last-child { border-right: 0; border-left: 1px solid #26272b; }
+.selbtn { writing-mode: horizontal-tb; font-size: 9px; letter-spacing: 1px; color: var(--dim);
+  background: #1b1c1f; border: 1px solid #33353a; border-radius: 3px; padding: 6px 5px; cursor: pointer; }
+.selbtn.on { color: #0d0e10; background: #5aa7e0; border-color: #5aa7e0; }
+.gpanel { width: 236px; min-width: 236px; padding: 4px 8px; display: flex; flex-direction: column; justify-content: center; gap: 6px; border-right: 1px solid #26272b; background: #131417; }
+#arec.gpanel { border-right: 0; border-left: 1px solid #26272b; }
+.gp-title { font-size: 9px; letter-spacing: 2px; color: #9aa0aa; }
+.gpanel.hidden { display: none; }
+.lr-row, .ar-row { display: flex; align-items: center; gap: 6px; }
+.lr-size { min-width: 22px; }
+.lr-size.on { color: #0d0e10; background: #5aa7e0; border-color: #5aa7e0; }
+.lr-prog { flex: 1; height: 10px; background: #17181b; border: 1px solid #3a3d42; border-radius: 2px; overflow: hidden; min-width: 40px; }
+.lr-prog i { display: block; height: 100%; width: 0%; background: #d7a13c; }
+#lrLen, #arTakes { font-size: 10px; color: #cfd2d8; }
+#lrDW, #arGainK { display: inline-flex; }
+#lrDW .knob, #arGainK .knob { transform: scale(.8); transform-origin: center; }
+.ar-meter { width: 110px; height: 10px; background: #17181b; border: 1px solid #3a3d42; border-radius: 2px; }
+#arDisp { font-size: 13px; color: #e6e8ec; letter-spacing: 1px; }
+.ar-dl { color: #6fb3e8; font-size: 10px; text-decoration: none; }
+.ar-dl.hidden { display: none; }
+#arRec.rec-on { color: #ffd7d7; background: #7e2020; border-color: #a33; }
+button.sm { font-size: 9px; padding: 4px 6px; }
+
+/* Master clock hover-sub controls (TAP / tick / ±) */
+.mc-sub { display: flex; gap: 4px; justify-content: center; margin-top: 2px; }
+.mc-sub .mc-b { font-size: 8px; padding: 2px 5px; }
+#tickBtn.on { color: #0d0e10; background: #5aa7e0; border-color: #5aa7e0; }
+
+/* ============ Preferences modal ============ */
+.modal { position: fixed; inset: 0; background: rgba(0,0,0,.55); display: flex; align-items: center; justify-content: center; z-index: 400; }
+.modal.hidden { display: none; }
+.modal-box { background: #1b1c1f; border: 1px solid #3a3d42; border-radius: 6px; min-width: 380px; padding: 12px 16px; box-shadow: 0 10px 40px rgba(0,0,0,.6); }
+.modal-head { display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px; color: #e6e8ec; font-size: 12px; letter-spacing: 1px; }
+.pref-grid { display: grid; grid-template-columns: 110px 1fr; gap: 8px 10px; align-items: center; font-size: 11px; color: #cfd2d8; }
+.pref-grid select { background: #101114; color: #ddd; border: 1px solid #3a3d42; border-radius: 3px; padding: 3px; max-width: 260px; }
+.modal-note { margin-top: 10px; font-size: 9px; color: var(--dim); }
+
+/* ============ header utility buttons state ============ */
+#cruiseBtn.on, #maxBrowserBtn.on { color: #0d0e10; background: #5aa7e0; border-color: #5aa7e0; }
+body.maxb #globalsec, body.maxb #decks { display: none; }
+body.maxb #library { flex: 1 1 auto; }
+
+#unit1.hidden, #unit2.hidden { display: none; }

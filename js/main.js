@@ -2,6 +2,7 @@ import { Deck } from "./audio/deck.js";
 import { DeckScope } from "./waveform.js";
 import { Engine } from "./audio/engine.js";
 import { FX_TYPES } from "./audio/fx.js";
+import { AudioRecorder, LoopRecorder } from "./audio/rec.js";
 import { Library } from "./library.js";
 import { MidiHub, BEATLOOP_SIZES } from "./midi/midi.js";
 import { initMonitor } from "./midi/monitor.js";
@@ -328,6 +329,158 @@ function wireMasterControl() {
   setQuantUI();
 }
 
+// ---- global panels, header utilities, master-clock extras ----
+let cruiseOn = false;
+let audioTried = false;
+let audioRec = null;
+let loopRec = null;
+let arMeterUI = null;
+
+function nudgeClock(dtm) {
+  const d = clockDeck();
+  const t = masterTempo();
+  if (!d || !d.bpm || !t) return;
+  setTempoBoth(d, clamp((t + dtm) / d.bpm - 1, -0.08, 0.08));
+}
+
+function schedTick() {
+  const ctx = engine.ctx;
+  const bpm = masterTempo();
+  if (!bpm) return;
+  if (schedTick._next < ctx.currentTime) schedTick._next = ctx.currentTime + 0.05;
+  while (schedTick._next < ctx.currentTime + 0.15) {
+    const t0 = schedTick._next;
+    const o = ctx.createOscillator();
+    const g = ctx.createGain();
+    o.frequency.value = schedTick._beat % 4 === 0 ? 1568 : 1046;
+    g.gain.setValueAtTime(0.001, t0);
+    g.gain.exponentialRampToValueAtTime(0.25, t0 + 0.005);
+    g.gain.exponentialRampToValueAtTime(0.001, t0 + 0.05);
+    o.connect(g).connect(engine.cueDest);
+    o.start(t0);
+    o.stop(t0 + 0.06);
+    schedTick._beat = (schedTick._beat + 1) % 4;
+    schedTick._next += 60 / bpm;
+  }
+}
+
+function wirePrefs() {
+  const m = $("#prefsModal");
+  $("#prefsBtn").addEventListener("click", () => {
+    $("#prefSr").textContent = (engine.ctx.sampleRate / 1000).toFixed(1) + " kHz";
+    $("#prefLat").textContent = engine.ctx.baseLatency ? (engine.ctx.baseLatency * 1000).toFixed(1) + " ms" : "–";
+    $("#prefLimiter").checked = engine.limiterOn;
+    m.classList.remove("hidden");
+  });
+  $("#prefsClose").addEventListener("click", () => m.classList.add("hidden"));
+  m.addEventListener("click", (e) => { if (e.target === m) m.classList.add("hidden"); });
+  $("#prefLimiter").addEventListener("change", (e) => {
+    engine.setLimiter(e.target.checked);
+    $("#limBtn").classList.toggle("on", engine.limiterOn);
+  });
+}
+
+function wireGlobalPanels() {
+  const setSide = (side, show) => {
+    if (side === "L") {
+      $("#unit1").classList.toggle("hidden", show !== "u1");
+      $("#lrec").classList.toggle("hidden", show !== "lrec");
+      $("#selU1").classList.toggle("on", show === "u1");
+      $("#selLRec").classList.toggle("on", show === "lrec");
+    } else {
+      $("#unit2").classList.toggle("hidden", show !== "u2");
+      $("#arec").classList.toggle("hidden", show !== "arec");
+      $("#selU2").classList.toggle("on", show === "u2");
+      $("#selARec").classList.toggle("on", show === "arec");
+    }
+  };
+  $("#selU1").addEventListener("click", () => setSide("L", "u1"));
+  $("#selLRec").addEventListener("click", () => setSide("L", "lrec"));
+  $("#selU2").addEventListener("click", () => setSide("R", "u2"));
+  $("#selARec").addEventListener("click", () => setSide("R", "arec"));
+
+  // LOOP RECORDER
+  $("#lrec").appendChild($("#lrecTpl").content.cloneNode(true));
+  loopRec = new LoopRecorder(engine, () => masterTempo() || 120,
+    (sel) => (sel === "m" ? decks.map((d) => d.deck.vol) : [decks[+sel].deck.vol]));
+  $("#lrSrc").addEventListener("change", (e) => loopRec.setSource(e.target.value));
+  document.querySelectorAll(".lr-size").forEach((b) => b.addEventListener("click", () => {
+    loopRec.sizeBeats = +b.dataset.b;
+    document.querySelectorAll(".lr-size").forEach((x) => x.classList.toggle("on", x === b));
+    if (loopRec.capturing) loopRec.stopCapture();
+  }));
+  $("#lrRec").addEventListener("click", () => {
+    if (loopRec.capturing) loopRec.stopCapture();
+    else if (loopRec.buf) loopRec.startDub();
+    else loopRec.startRec();
+  });
+  $("#lrPlay").addEventListener("click", () => { if (loopRec.playing) loopRec.stop(); else loopRec.play(); });
+  $("#lrDel").addEventListener("click", () => loopRec.delete());
+  $("#lrUndo").addEventListener("click", () => loopRec.undo());
+  $("#lrRedo").addEventListener("click", () => loopRec.redo());
+  const lrk = makeKnob({ label: "D/W", value: 0.7, bipolar: false, onInput: (v) => loopRec.setDW(v) });
+  $("#lrDW").appendChild(lrk.el);
+
+  // AUDIO RECORDER
+  $("#arec").appendChild($("#arecTpl").content.cloneNode(true));
+  audioRec = new AudioRecorder(engine);
+  if (!audioRec.supported) { $("#arRec").disabled = true; $("#arRec").title = "MediaRecorder unsupported"; }
+  arMeterUI = makeMeter($("#arMeter"), false);
+  const arg = makeKnob({ label: "GAIN", value: 0.5, bipolar: false, onInput: (v) => engine.setRecGain(v) });
+  $("#arGainK").appendChild(arg.el);
+  engine.setRecGain(0.5);
+  $("#arRec").addEventListener("click", () => {
+    if (audioRec.recording) audioRec.cut(false);
+    else { engine.resume(); audioRec.start(); }
+  });
+  $("#arCut").addEventListener("click", () => { if (audioRec.recording) audioRec.cut(true); });
+
+  // Master clock extras (doc: hover controls — TAP, tick, ±)
+  const tapTimes = [];
+  $("#tapBtn").addEventListener("click", () => {
+    const now = performance.now();
+    tapTimes.push(now);
+    while (tapTimes.length && now - tapTimes[0] > 2400) tapTimes.shift();
+    if (tapTimes.length >= 3) {
+      const ivs = [];
+      for (let i = 1; i < tapTimes.length; i++) ivs.push(tapTimes[i] - tapTimes[i - 1]);
+      const bpm = clamp(60000 / (ivs.reduce((a, b) => a + b, 0) / ivs.length), 40, 250);
+      const d = clockDeck();
+      if (d && d.bpm) setTempoBoth(d, clamp(bpm / d.bpm - 1, -0.08, 0.08));
+    }
+  });
+  $("#mDownBtn").addEventListener("click", () => nudgeClock(-0.5));
+  $("#mUpBtn").addEventListener("click", () => nudgeClock(0.5));
+  let tickOn = false;
+  let tickTimer = null;
+  $("#tickBtn").addEventListener("click", (e) => {
+    tickOn = !tickOn;
+    e.currentTarget.classList.toggle("on", tickOn);
+    if (tickOn) {
+      schedTick._next = engine.ctx.currentTime + 0.05;
+      schedTick._beat = 0;
+      tickTimer = setInterval(schedTick, 60);
+    } else clearInterval(tickTimer);
+  });
+
+  // Header utility buttons
+  $("#maxBrowserBtn").addEventListener("click", (e) => {
+    const on = document.body.classList.toggle("maxb");
+    e.currentTarget.classList.toggle("on", on);
+  });
+  $("#cruiseBtn").addEventListener("click", (e) => {
+    cruiseOn = !cruiseOn;
+    e.currentTarget.classList.toggle("on", cruiseOn);
+  });
+  $("#tipBtn").addEventListener("click", (e) => {
+    const on = e.currentTarget.classList.toggle("on");
+    if (on) document.querySelectorAll("[data-tip]").forEach((el) => { el.title = el.dataset.tip; delete el.dataset.tip; });
+    else document.querySelectorAll("[title]").forEach((el) => { el.dataset.tip = el.title; el.removeAttribute("title"); });
+  });
+
+  wirePrefs();
+}
+
 // ---- tracks / decks ----
 const library = new Library($("#library"), { onLoad: (t) => loadTrack(t) });
 
@@ -339,7 +492,8 @@ function pickFreeSlot() {
 
 function loadTrack(track, targetIdx = null) {
   const slot = targetIdx != null ? decks[targetIdx] : pickFreeSlot();
-  slot.deck.load(track).then(() => {
+  slot.deck._cruise = false;
+  return slot.deck.load(track).then(() => {
     library.noteHistory(track);
     library.setDeckTrack(slot.deck.idx, track.id);
   }).catch((e) => {
@@ -367,14 +521,25 @@ const ledCache = {};
 const hub = new MidiHub(handleMidi, null);
 initMonitor(hub);
 hub.onStatus = (s) => {
-  const el = $("#midiStatus");
-  el.textContent = "MIDI " + s;
-  const ok = /ddj|pioneer/i.test(s);
-  el.classList.toggle("ok", ok);
-  el.classList.toggle("err", !ok && s !== "off");
+  // Connection indicator: blue = all controllers connected, orange = some, unlit = none
+  const conn = $("#connInd");
+  const ddj = /ddj|pioneer/i.test(s);
+  conn.classList.toggle("b", ddj);
+  conn.classList.toggle("o", !ddj && !!s && s !== "off");
+  const dev = $("#devInfo");
+  if (dev) dev.textContent = "MIDI: " + (s === "off" ? "–" : s);
+  conn.title = "Connection indicator — " + (s === "off" ? "no controllers" : s);
 };
 
+function midiFlash() {
+  const el = $("#midiInd");
+  el.classList.add("b");
+  clearTimeout(midiFlash._t);
+  midiFlash._t = setTimeout(() => el.classList.remove("b"), 120);
+}
+
 function handleMidi(a, c) {
+  if (!handleMidi._t || performance.now() - handleMidi._t > 80) { handleMidi._t = performance.now(); midiFlash(); }
   if (engine.ctx.state !== "running") engine.resume();
   const um = /^u([12])\.(?:s([123])\.)?(on|type|mix|p1|p2|dw|rst)$/.exec(a);
   if (um) {
@@ -452,6 +617,7 @@ function ledSync() {
 let masterMeter = null;
 let tickN = 0;
 function frame() {
+  const _t0 = performance.now();
   try {
   for (const { deck, scope, ruler, mod } of decks) {
     deck.tick();
@@ -471,6 +637,8 @@ function frame() {
     }
   }
   if (masterMeter) masterMeter.setPeak(engine.masterPeak());
+  if (arMeterUI && audioRec && audioRec.recording) arMeterUI.setPeak(engine.recLevel());
+  if (loopRec) $("#lrFill").style.width = (loopRec.progress() * 100).toFixed(1) + "%";
   for (const u of fxUIs) {
     if (!u) continue;
     for (const s of u.slots) s.relabel();
@@ -479,9 +647,45 @@ function frame() {
   const mtEl = $("#mTempo");
   const txt = mt ? mt.toFixed(2) : "––.––";
   if (mtEl.textContent !== txt) mtEl.textContent = txt;
-  if (++tickN % 30 === 0) {
-    $("#clock").textContent = new Date().toTimeString().slice(0, 5);
-    $("#audioInd").classList.toggle("ok", engine.ctx.state === "running");
+  if (++tickN % 120 === 0) {
+    $("#clock").textContent = new Date().toTimeString().slice(0, 8);
+    const ai = $("#audioInd");
+    const st = engine.ctx.state;
+    ai.classList.toggle("b", st === "running");
+    ai.classList.toggle("ok", false);
+    ai.classList.toggle("o", st === "suspended" && audioTried);
+    ai.classList.toggle("r", st !== "running" && st !== "suspended");
+    const lf = $("#loadFill");
+    const pct = clamp((frame._load || 0) / 16.67, 0, 1);
+    lf.style.width = (pct * 100).toFixed(0) + "%";
+    lf.classList.toggle("hot", pct > 0.5);
+    lf.classList.toggle("max", pct > 0.85);
+    $("#loadPct").textContent = Math.round(pct * 100) + "%";
+    if (audioRec) {
+      const e = audioRec.elapsed;
+      const mm = String(Math.floor(e / 60)).padStart(2, "0");
+      const ss = String(Math.floor(e % 60)).padStart(2, "0");
+      $("#arDisp").textContent = `${mm}:${ss} \u00b7 ${(audioRec.bytes / 1048576).toFixed(1)} MB`;
+      $("#arTakes").textContent = audioRec.takes.length + (audioRec.takes.length === 1 ? " take" : " takes");
+      const last = audioRec.takes[audioRec.takes.length - 1];
+      const dl = $("#arDl");
+      if (last) { dl.classList.remove("hidden"); dl.href = last.url; }
+      $("#recInd").classList.toggle("rec", audioRec.recording);
+      $("#arRec").classList.toggle("rec-on", audioRec.recording);
+    }
+    $("#lrLen").textContent = loopRec && loopRec.buf ? loopRec.buf.duration.toFixed(1) + "s" : "\u2013";
+  }
+  // Cruise Mode: automatically play the next track from the list when the deck ends
+  for (const { deck } of decks) {
+    if (cruiseOn && deck._wasPlaying && !deck.playing && deck.track && deck.durSec &&
+        !deck._cruise && deck.posSec >= deck.durSec - 0.5) {
+      deck._cruise = true;
+      const arr = library.filtered() || library.tracks;
+      const i = arr.findIndex((t) => t.id === deck.track.id);
+      const nt = arr[(i + 1) % arr.length] || deck.track;
+      loadTrack(nt, deck.idx).then(() => decks[deck.idx] && decks[deck.idx].deck.play());
+    }
+    deck._wasPlaying = deck.playing;
   }
   ledSync();
   } catch (e) {
@@ -490,6 +694,7 @@ function frame() {
       window.__errs.push("FRAME: " + (e && e.message || e));
     }
   }
+  frame._load = (frame._load || 0) * 0.95 + Math.max(0, performance.now() - _t0) * 0.05;
   requestAnimationFrame(frame);
 }
 
@@ -515,6 +720,7 @@ function frame() {
     $("#cueKnob").appendChild(cueKnob.el);
     engine.setCueLevel(0.7);
     wireMasterControl();
+    wireGlobalPanels();
 
     try {
       const devs = await Promise.race([
@@ -542,9 +748,9 @@ function frame() {
     console.error("boot error", e);
   }
 
-  window.addEventListener("pointerdown", () => engine.resume());
+  window.addEventListener("pointerdown", () => { audioTried = true; engine.resume(); });
   engine.resume();
-  $("#clock").textContent = new Date().toTimeString().slice(0, 5);
+  $("#clock").textContent = new Date().toTimeString().slice(0, 8);
   window.addEventListener("keydown", (e) => {
     const t = e.target.tagName;
     if (t === "INPUT" || t === "SELECT" || t === "TEXTAREA") return;

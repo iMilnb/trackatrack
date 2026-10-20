@@ -33,6 +33,21 @@ export class Engine {
 
     this.masterDeck = 0;
     this.quantize = 4; // beats; 0 = off
+
+    // AUDIO RECORDER: post-master tap -> gain -> MediaStreamDestination (+ meter analyser)
+    this.recGain = ctx.createGain();
+    this.masterVol.connect(this.recGain);
+    this.recDest = ctx.createMediaStreamDestination();
+    this.recGain.connect(this.recDest);
+    this.recAnalyser = ctx.createAnalyser();
+    this.recAnalyser.fftSize = 512;
+    this.recGain.connect(this.recAnalyser);
+    this._rbuf = new Float32Array(this.recAnalyser.fftSize);
+
+    // LOOP RECORDER: playback bus injects into master chain
+    this.loopBus = ctx.createGain();
+    this.loopBus.gain.value = 0.7;
+    this.loopBus.connect(this.masterVol);
   }
 
   resume() {
@@ -49,6 +64,7 @@ export class Engine {
     this.limiter.disconnect();
     if (on) this.masterVol.connect(this.limiter).connect(this.masterAnalyser);
     else this.masterVol.connect(this.masterAnalyser);
+    this.masterVol.connect(this.recGain);
   }
 
   async setMasterSink(id) {
@@ -67,6 +83,14 @@ export class Engine {
     this.masterAnalyser.getFloatTimeDomainData(this._buf);
     let p = 0;
     for (let i = 0; i < this._buf.length; i++) { const a = Math.abs(this._buf[i]); if (a > p) p = a; }
+    return p;
+  }
+
+  setRecGain(v) { this.recGain.gain.value = v * 2; }
+  recLevel() {
+    this.recAnalyser.getFloatTimeDomainData(this._rbuf);
+    let p = 0;
+    for (let i = 0; i < this._rbuf.length; i++) { const a = Math.abs(this._rbuf[i]); if (a > p) p = a; }
     return p;
   }
 }

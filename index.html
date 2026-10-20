@@ -10,22 +10,33 @@
 <!-- ============ Header ============ -->
 <div id="header">
   <div class="logo">TRACKA<span>TRACK</span></div>
-  <span id="midiStatus" class="hd-ind" title="MIDI status">MIDI</span>
-  <span id="audioInd" class="hd-ind" title="Audio engine">AUDIO</span>
+  <span id="midiInd" class="hd-ind" title="MIDI indicator — lights while a MIDI signal is received">MIDI</span>
+  <span id="connInd" class="hd-ind" title="Connection indicator — blue: all controllers connected, orange: some, unlit: none">CONN</span>
+  <span id="audioInd" class="hd-ind" title="Audio indicator — blue: audio interface running, orange: suspended, red: none">AUDIO</span>
+  <span id="recInd" class="hd-ind" title="Recording indicator — red while AUDIO RECORDER records">REC</span>
+  <span id="loadWrap" class="hd-load" title="Load — computing time used per audio buffer">LOAD<b class="loadbar"><i id="loadFill"></i></b><em id="loadPct">0%</em></span>
   <span class="grow"></span>
-  <canvas id="masterMeter" class="hmeter" title="Master out"></canvas>
-  <span id="clock">--:--</span>
-  <span class="sepr"></span>
-  <label class="tb">OUT <select id="masterOut"></select></label>
-  <label class="tb">PHONES <select id="cueOut"></select></label>
+  <canvas id="masterMeter" class="hmeter" title="Master Output level meter"></canvas>
+  <span id="clock" title="System Clock — time of day">--:--:--</span>
+  <select id="layoutSel" class="tb" title="Layout selector">
+    <option value="2d">2 Deck</option>
+  </select>
+  <button id="maxBrowserBtn" class="btn tb" title="Maximize Browser">⊞</button>
+  <button id="prefsBtn" class="btn tb" title="Preferences">⚙</button>
+  <button id="cruiseBtn" class="btn tb" title="Cruise Mode — automatically play the next track">CRUISE</button>
+  <button id="tipBtn" class="btn tb on" title="Tooltip button">?</button>
+  <button id="fsBtn" class="btn tb" title="Fullscreen button">⛶</button>
   <button id="monBtn" class="btn tb" title="MIDI monitor / learn">MON</button>
-  <button id="fsBtn" class="btn tb" title="Fullscreen">⛶</button>
 </div>
 
 <!-- ============ Global section: FX Unit 1 | Master Control | FX Unit 2 ============ -->
 <div id="globalsec">
-  <div class="fx-tab">FX</div>
+  <div class="sel-col">
+    <button id="selU1" class="btn selbtn on" title="Show FX Unit 1">FX 1</button>
+    <button id="selLRec" class="btn selbtn" title="Show LOOP RECORDER">LOOP REC</button>
+  </div>
   <div class="fxunit" id="unit1"></div>
+  <div id="lrec" class="gpanel hidden"></div>
   <div id="mctrl">
     <div class="mc-left">
       <button id="snapBtn" class="btn mc-b" title="Snap controls to beat grid">SNAP</button>
@@ -33,7 +44,13 @@
       <button id="linkBtn" class="btn mc-b" title="Link deck tempos">LINK</button>
     </div>
     <div class="mc-mid">
-      <div id="mTempo" class="mc-tempo" title="Master clock — drag vertically to adjust">120.00</div>
+      <div id="mTempo" class="mc-tempo" title="Master Clock tempo — drag to adjust, double-click to enter">120.00</div>
+      <div class="mc-sub">
+        <button id="tapBtn" class="btn mc-b" title="Tap in the Master Clock tempo">TAP</button>
+        <button id="tickBtn" class="btn mc-b" title="Metronome (Master Clock Tick)">♪</button>
+        <button id="mDownBtn" class="btn mc-b" title="Master Tempo down">−</button>
+        <button id="mUpBtn" class="btn mc-b" title="Master Tempo up">+</button>
+      </div>
       <div class="mc-clk">
         <button id="autoBtn" class="btn mc-b on" title="Master clock follows playing deck">AUTO</button>
         <button id="mclockBtn" class="btn mc-b" title="Master clock held by MASTER deck">MASTER</button>
@@ -45,7 +62,11 @@
     </div>
   </div>
   <div class="fxunit" id="unit2"></div>
-  <div class="fx-tab">FX</div>
+  <div id="arec" class="gpanel hidden"></div>
+  <div class="sel-col">
+    <button id="selARec" class="btn selbtn" title="Show AUDIO RECORDER">AUDIO REC</button>
+    <button id="selU2" class="btn selbtn on" title="Show FX Unit 2">FX 2</button>
+  </div>
 </div>
 
 <!-- ============ Decks + Mixer ============ -->
@@ -66,6 +87,65 @@
 
 <!-- ============ Browser ============ -->
 <div id="library"></div>
+
+<template id="lrecTpl">
+  <div class="lrec">
+    <b class="gp-title">LOOP RECORDER</b>
+    <div class="lr-row">
+      <select id="lrSrc" class="tb" title="Source for the recording">
+        <option value="m">Master</option><option value="0">Deck A</option><option value="1">Deck B</option>
+      </select>
+      <span class="lr-sizes" title="SIZE — initial length of the recording">
+        <button class="btn sm lr-size" data-b="0.5">½</button>
+        <button class="btn sm lr-size on" data-b="1">1</button>
+        <button class="btn sm lr-size" data-b="2">2</button>
+        <button class="btn sm lr-size" data-b="4">4</button>
+        <button class="btn sm lr-size" data-b="8">8</button>
+      </span>
+      <div class="lr-prog" title="Progress — current length of the recording"><i id="lrFill"></i></div>
+      <span id="lrLen" class="mono">–</span>
+    </div>
+    <div class="lr-row">
+      <button id="lrRec" class="btn sm" title="Record / overdub">● REC</button>
+      <button id="lrPlay" class="btn sm" title="Play / stop the loop">▶ PLAY</button>
+      <button id="lrDel" class="btn sm" title="Delete the recorded loop">DEL</button>
+      <button id="lrUndo" class="btn sm" title="Undo last overdub">↶</button>
+      <button id="lrRedo" class="btn sm" title="Redo">↷</button>
+      <span id="lrDW" class="lr-dw"></span>
+    </div>
+  </div>
+</template>
+
+<template id="arecTpl">
+  <div class="arec">
+    <b class="gp-title">AUDIO RECORDER</b>
+    <div class="ar-row">
+      <span id="arDisp" class="mono big">00:00 · 0.0 MB</span>
+      <canvas id="arMeter" class="ar-meter" title="Recording meter"></canvas>
+    </div>
+    <div class="ar-row">
+      <button id="arRec" class="btn sm" title="Start / stop recording">● REC</button>
+      <button id="arCut" class="btn sm" title="Save current file and start a new one">CUT</button>
+      <span id="arGainK"></span>
+      <a id="arDl" class="ar-dl hidden" download="trackatrack.webm">⬇ take</a>
+      <span id="arTakes" class="mono">0 takes</span>
+    </div>
+  </div>
+</template>
+
+<div id="prefsModal" class="modal hidden">
+  <div class="modal-box">
+    <div class="modal-head"><b>Preferences</b><button id="prefsClose" class="btn">✕</button></div>
+    <div class="pref-grid">
+      <label>Master out</label><select id="masterOut"></select>
+      <label>Phones out</label><select id="cueOut"></select>
+      <label>Master limiter</label><input type="checkbox" id="prefLimiter" checked>
+      <label>Sample rate</label><span id="prefSr" class="mono">–</span>
+      <label>Output latency</label><span id="prefLat" class="mono">–</span>
+    </div>
+    <div class="modal-note">Preferences — output routing &amp; master settings.</div>
+  </div>
+</div>
 
 <template id="unitTpl">
   <div class="fxunit">
@@ -154,7 +234,7 @@
 <script>
 window.__errs = [];
 window.addEventListener("error", (e) => window.__errs.push(e.message + " @" + e.filename + ":" + e.lineno));
-window.addEventListener("unhandledrejection", (e) => window.__errs.push("REJECT: " + (e.reason && e.reason.message || e.reason)));
+window.addEventListener("unhandledrejection", (e) => window.__errs.push("REJECT: " + ((e.reason && (e.reason.stack || e.reason.message)) || e.reason)));
 setInterval(() => { if (window.__errs.length) document.title = "ERRS: " + window.__errs.slice(-3).join(" | "); }, 1500);
 if (!window.isSecureContext && !/^\d+\.\d+\.\d+\.\d+$/.test(location.hostname) && location.hostname !== "localhost") {
   const b = document.createElement("div");
