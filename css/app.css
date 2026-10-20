@@ -175,17 +175,22 @@ select {
   border-radius: 6px; padding: 6px 6px 8px; min-height: 0;
 }
 #strips { display: flex; justify-content: center; gap: 6px; flex: 1; min-height: 0; }
-.strip { width: 108px; display: grid; grid-template-columns: auto auto; grid-template-rows: auto auto auto 1fr; justify-content: center; column-gap: 10px; row-gap: 3px; height: 100%; }
-.s-letter { grid-column: 1 / -1; font-weight: 700; color: #ececf1; font-size: 13px; text-align: center; }
+.strip { width: 108px; display: flex; flex-direction: column; align-items: center; height: 100%; min-height: 0; }
+.s-letter { font-weight: 700; color: #ececf1; font-size: 13px; }
 #deckslotA ~ #mixer .strip:first-child .s-letter, .strip.lA .s-letter { color: var(--orange); }
-/* Reference 2-deck layout: EQ knobs face inward, GAIN/FLTR/FX/KEY/CUE on the outer edge */
-.s-outer, .s-inner { display: flex; flex-direction: column; gap: 3px; align-items: center; }
-.strip.lB .s-outer { order: 2; }
-.strip.lB .s-inner { order: 1; }
+/* Reference layout: outer knob column (GAIN/FLTR/FX/KEY/CUE) beside inner column; channel fader BELOW HI/MID/LOW */
+.s-body { display: flex; justify-content: center; gap: 6px; flex: 1; min-height: 0; width: 100%; }
+.strip.lB .s-body { flex-direction: row-reverse; }
+.s-outer, .s-inner { display: flex; flex-direction: column; gap: 2px; align-items: center; min-height: 0; }
+.s-inner { flex: 1; }
 .s-fxbtns { display: flex; align-items: center; gap: 3px; }
 .s-fxbtns .btn { min-width: 22px; padding: 2px 4px; font-size: 9px; }
 .sfx-label { font-size: 8px; color: var(--dim); letter-spacing: 1px; }
-.s-faderrow { grid-column: 1 / -1; display: flex; justify-content: center; align-items: stretch; gap: 6px; min-height: 90px; min-width: 0; }
+.s-mxselrow { display: flex; align-items: center; gap: 2px; }
+.s-mxsel { background: #0d0e10; color: var(--text); border: 1px solid #3a3d42; border-radius: 3px; font-size: 8px; padding: 1px 2px; width: 42px; }
+.s-mxselrow .btn.s-mxon { font-size: 7px; padding: 2px 3px; color: #8b8d93; }
+.s-mxselrow .btn.s-mxon.on { background: #e0b04f; border-color: #e0b04f; color: #171204; font-weight: 700; }
+.s-faderrow { flex: 1; min-height: 60px; display: flex; justify-content: center; align-items: stretch; gap: 4px; width: 100%; }
 .s-meter { width: 9px; height: 100%; background: #0c0d0f; border-radius: 2px; }
 .s-vol { display: flex; align-items: stretch; height: auto; }
 .s-vol .vfader { height: 100%; }
@@ -399,11 +404,7 @@ body.maxb #library { flex: 1 1 auto; }
 .s-kills { display: flex; gap: 3px; justify-content: center; padding-top: 2px; width: 100%; }
 .s-kills .btn.k { font-size: 8px; padding: 2px 4px; color: #7d7f85; }
 .s-kills .btn.k.on { color: #0d0e10; background: #d05c5c; border-color: #d05c5c; font-weight: 700; }
-.s-mixfx { grid-column: 1 / -1; display: flex; align-items: center; gap: 3px; padding-top: 3px; width: 100%; }
-.s-mxsel { flex: 1; min-width: 0; background: #0d0e10; color: var(--text); border: 1px solid #3a3d42; border-radius: 3px; font-size: 8px; padding: 2px; }
-.s-mixfx .btn.s-mxon { font-size: 8px; padding: 3px 4px; color: #8b8d93; }
-.s-mixfx .btn.s-mxon.on { background: #e0b04f; border-color: #e0b04f; color: #171204; font-weight: 700; }
-.s-mxk .knob { --ks: 22px; }
+.s-mxselrow { padding-top: 2px; }
 .xfb { font-size: 8px; padding: 3px 5px; color: #8b8d93; }
 .xfb.err { color: #e05c5c; border-color: #7a3030; }
 .xfb.on, #auxBtn.on { color: #0d0e10; background: #4fd74f; border-color: #4fd74f; }
@@ -430,14 +431,13 @@ body.maxb #library { flex: 1 1 auto; }
   .strip { row-gap: 1px; }
   .s-outer .knob, .s-inner .knob { --ks: 26px; }
   .s-faderrow { min-height: 70px; }
-  .s-kills, .s-mixfx { padding-top: 0; }
+  .s-kills { padding-top: 0; }
   .s-keyk .knob, .s-pank .knob { --ks: 24px; }
 }
 @media (max-height: 830px) {
   .s-outer .knob, .s-inner .knob { --ks: 22px; }
   .s-outer .knob-label, .s-inner .knob-label { display: none; }
   .s-outer, .s-inner { gap: 0; }
-  .s-mixfx .knob-label { display: none; }
   .s-faderrow { min-height: 56px; }
   .s-letter { font-size: 11px; }
 }

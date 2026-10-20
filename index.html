@@ -256,38 +256,39 @@
 <template id="stripTpl">
   <div class="strip">
     <div class="s-letter">A</div>
-    <div class="s-outer">
-      <div class="s-gk"></div>
-      <div class="s-fk"></div>
-      <div class="s-fxbtns">
-        <button class="btn sfx1" title="Route this channel to FX Unit 1">1</button>
-        <button class="btn sfx2" title="Route this channel to FX Unit 2">2</button>
-        <span class="sfx-label">FX</span>
+    <div class="s-body">
+      <div class="s-outer">
+        <div class="s-gk"></div>
+        <div class="s-mxselrow">
+          <select class="s-mxsel" title="Mixer FX drop-down menu — type"></select>
+          <button class="btn s-mxon" title="Mixer FX On">FX</button>
+        </div>
+        <div class="s-fk"></div>
+        <div class="s-fxbtns">
+          <button class="btn sfx1" title="Route this channel to FX Unit 1">1</button>
+          <button class="btn sfx2" title="Route this channel to FX Unit 2">2</button>
+          <span class="sfx-label">FX</span>
+        </div>
+        <div class="s-keyk"></div>
+        <button class="btn s-lock" title="Key Lock — preserve pitch when tempo changes (browser engine: limited)">LOCK</button>
+        <button class="btn pfl" title="Cue this channel in headphones">🎧</button>
       </div>
-      <div class="s-keyk"></div>
-      <button class="btn s-lock" title="Key Lock — preserve pitch when tempo changes (browser engine: limited)">LOCK</button>
-      <button class="btn pfl" title="Cue this channel in headphones">🎧</button>
-    </div>
-    <div class="s-inner">
-      <div class="s-hk"></div>
-      <div class="s-mk"></div>
-      <div class="s-lk"></div>
-      <div class="s-kills">
-        <button class="btn k" data-k="hi" title="Kill — takes the high frequencies completely out">HI</button>
-        <button class="btn k" data-k="mid" title="Kill — takes the mid frequencies completely out">MID</button>
-        <button class="btn k" data-k="low" title="Kill — takes the low frequencies completely out">LOW</button>
+      <div class="s-inner">
+        <div class="s-hk"></div>
+        <div class="s-mk"></div>
+        <div class="s-lk"></div>
+        <div class="s-kills">
+          <button class="btn k" data-k="hi" title="Kill — takes the high frequencies completely out">HI</button>
+          <button class="btn k" data-k="mid" title="Kill — takes the mid frequencies completely out">MID</button>
+          <button class="btn k" data-k="low" title="Kill — takes the low frequencies completely out">LOW</button>
+        </div>
+        <div class="s-faderrow">
+          <div class="s-vol"></div>
+          <canvas class="s-meter"></canvas>
+          <span class="s-key"></span>
+          <div class="s-pank"></div>
+        </div>
       </div>
-    </div>
-    <div class="s-mixfx">
-      <select class="s-mxsel" title="Mixer FX drop-down menu"></select>
-      <div class="s-mxk"></div>
-      <button class="btn s-mxon" title="Mixer FX On">FX</button>
-    </div>
-    <div class="s-faderrow">
-      <div class="s-vol"></div>
-      <canvas class="s-meter"></canvas>
-      <span class="s-key"></span>
-      <div class="s-pank"></div>
     </div>
   </div>
 </template>

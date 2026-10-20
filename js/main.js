@@ -186,7 +186,8 @@ function buildStrip(i, letter) {
     ["hi", "HI", (v) => deck.setEq("hi", v), ".s-hk"],
     ["mid", "MID", (v) => deck.setEq("mid", v), ".s-mk"],
     ["low", "LOW", (v) => deck.setEq("low", v), ".s-lk"],
-    ["fltr", "FLTR", (v) => deck.setFilter(v), ".s-fk"],
+    // Reference layout: FLTR knob doubles as the Mixer FX amount knob (▾ dropdown selects type)
+    ["fltr", "FLTR", (v) => { deck.setFilter(v); deck.mixFx.setMix(v); }, ".s-fk"],
   ]) {
     const kn = makeKnob({ label, value: 0.5, onInput: cb });
     knobs[k] = kn;
@@ -222,11 +223,9 @@ function buildStrip(i, letter) {
     });
   }
   const mxSel = q(".s-mxsel");
-  mxSel.innerHTML = `<option value="">MIX FX</option>` +
+  mxSel.innerHTML = `<option value="">FX</option>` +
     Object.entries(FX_TYPES).map(([k, v]) => `<option value="${k}">${v.label}</option>`).join("");
   const mxOn = q(".s-mxon");
-  const mxKnob = makeKnob({ label: "AMT", value: 0.5, bipolar: false, onInput: (v) => deck.mixFx.setMix(v) });
-  q(".s-mxk").appendChild(mxKnob.el);
   mxSel.addEventListener("change", () => {
     deck.setMixerFx(mxSel.value || null);
     if (mxSel.value && !deck.mixFx.enabled) deck.mixFx.setEnabled(true);
