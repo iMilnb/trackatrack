@@ -4,6 +4,7 @@ import { DeckScope } from "./waveform.js";
 import { Engine } from "./audio/engine.js";
 import { FX_TYPES, FX_BUTTONS } from "./audio/fx.js";
 import { AudioRecorder, LoopRecorder } from "./audio/rec.js";
+import { PreviewPlayer } from "./audio/preview.js";
 import { Library } from "./library.js";
 import { MidiHub, BEATLOOP_SIZES } from "./midi/midi.js";
 import { initMonitor } from "./midi/monitor.js";
@@ -500,6 +501,7 @@ let audioTried = false;
 let audioRec = null;
 let loopRec = null;
 let arMeterUI = null;
+let preview = null;
 
 function nudgeClock(dtm) {
   const d = clockDeck();
@@ -658,12 +660,15 @@ function pickFreeSlot() {
 function loadTrack(track, targetIdx = null) {
   const slot = targetIdx != null ? decks[targetIdx] : pickFreeSlot();
   slot.deck._cruise = false;
+  library.status(`Loading “${track.title}” into Deck ${slot.deck.letter}…`);
   return slot.deck.load(track).then(() => {
     library.noteHistory(track);
     library.setDeckTrack(slot.deck.idx, track.id);
+    library.status(`Ready — Deck ${slot.deck.letter}: ${track.title}`);
   }).catch((e) => {
     console.error("load failed", e);
     slot.els.state.textContent = "LOAD ERROR";
+    library.status(`Load failed: ${(e && e.message) || e}`);
   });
 }
 
@@ -848,6 +853,18 @@ function frame() {
       $("#arRec").classList.toggle("rec-on", audioRec.recording);
     }
     $("#lrLen").textContent = loopRec && loopRec.buf ? loopRec.buf.duration.toFixed(1) + "s" : "\u2013";
+    if (preview) {
+      const pvF = $("#pvFill");
+      pvF.style.width = preview.dur ? (Math.min(1, preview.pos / preview.dur) * 100).toFixed(1) + "%" : "0%";
+      pvF.classList.toggle("on", preview.playing);
+      $("#pvPlay").textContent = preview.state === "loading" ? "…" : preview.playing ? "⏸" : "⏵";
+    }
+    if (audioRec && audioRec.recording) {
+      const e2 = audioRec.elapsed;
+      library.status(undefined, `● REC ${String(Math.floor(e2 / 60)).padStart(2, "0")}:${String(Math.floor(e2 % 60)).padStart(2, "0")}`);
+    } else if (audioRec && $("#libstat2") && $("#libstat2").textContent.startsWith("● REC")) {
+      library.status(undefined, "");
+    }
   }
   // Cruise Mode: automatically play the next track from the list when the deck ends
   for (const { deck } of decks) {
@@ -958,8 +975,27 @@ function frame() {
       else document.documentElement.requestFullscreen().catch(() => {});
     });
 
-    library.load().catch((e) => console.error(e));
+    library.load().catch((e) => {
+      console.error(e);
+      library.status("Collection load failed: " + (e && e.message || e));
+    });
     hub.init();
+
+    // Browser Preview Player
+    preview = new PreviewPlayer(engine);
+    const pvBtn = $("#pvPlay");
+    pvBtn.addEventListener("click", async () => {
+      engine.resume();
+      try {
+        await preview.toggle(library.selectedTrack() || preview.track);
+      } catch (e) {
+        library.status("Preview failed: " + (e && e.message || e));
+      }
+    });
+    $("#pvStop").addEventListener("click", () => preview.stop());
+    const pvVol = makeKnob({ label: "VOL", value: 0.6, bipolar: false, onInput: (v) => preview.setVol(v) });
+    $("#pvVol").appendChild(pvVol.el);
+    preview.setVol(0.6);
   } catch (e) {
     window.__errs.push("BOOT: " + (e && e.stack || e));
     console.error("boot error", e);

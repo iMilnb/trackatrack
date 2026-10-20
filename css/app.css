@@ -404,3 +404,19 @@ body.maxb #library { flex: 1 1 auto; }
 .xfb.err { color: #e05c5c; border-color: #7a3030; }
 .xfb.on, #auxBtn.on { color: #0d0e10; background: #4fd74f; border-color: #4fd74f; }
 #auxKnob .knob { transform: scale(.8); transform-origin: top left; }
+
+/* ============ WP6: browser tree favorites, preview, status bar ============ */
+#tblwrap { flex: 1; }
+#libstatus { display: flex; gap: 10px; align-items: center; border-top: 1px solid #202028; padding: 2px 8px; font-size: 9px; color: var(--dim); letter-spacing: .5px; min-height: 16px; }
+#libstat2 { color: #ff8080; }
+.tsec { font-size: 8px; letter-spacing: 2px; color: #6a6c72; padding: 6px 8px 2px; }
+.tstar { background: none; border: 0; color: #3a3d42; cursor: pointer; font-size: 9px; padding: 0 3px; visibility: hidden; }
+.tnode:hover .tstar { visibility: visible; }
+.tstar.on { visibility: visible; color: #e0b04f; }
+.tstar-on { color: #e0b04f; font-size: 9px; padding: 0 3px; }
+.pvlab { font-size: 8px; letter-spacing: 2px; color: #6a6c72; }
+.pvprog { width: 90px; height: 6px; background: #17181b; border: 1px solid #3a3d42; border-radius: 2px; overflow: hidden; }
+.pvprog i { display: block; height: 100%; width: 0; background: #555a63; }
+.pvprog i.on { background: #4fd74f; }
+#pvVol .knob { transform: scale(.6); transform-origin: top left; }
+#pvPlay.on { color: #4fd74f; }

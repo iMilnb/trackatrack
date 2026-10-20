@@ -25,6 +25,9 @@ export class Library {
     this.deckOf = {}; // trackId -> deck index
     this.expanded = new Set();
     this.tab = "collection"; // collection | history
+    this.favs = (() => {
+      try { return JSON.parse(localStorage.getItem("ta-favs") || "[]"); } catch { return []; }
+    })();
     this.history = (() => {
       try { return JSON.parse(localStorage.getItem("ta-history") || "[]"); } catch { return []; }
     })();
@@ -32,9 +35,11 @@ export class Library {
   }
 
   async load() {
+    this.status("Loading Track Collection…");
     this.tracks = await getJSON("/api/tracks");
     this._buildTree();
     this.render();
+    this.status(`Track Collection — ${this.tracks.length} tracks`);
   }
 
   _build() {
@@ -47,14 +52,22 @@ export class Library {
         <div id="tree"></div>
         <div id="libmain">
           <div id="libbar">
-            <input id="search" type="search" placeholder="filter…" autocomplete="off">
+            <input id="search" type="search" placeholder="filter…" autocomplete="off" title="Search field — live search based on the tags of the tracks">
             <span id="libcount"></span>
+            <span class="grow"></span>
+            <span class="pvlab" title="Preview Player — preview tracks before loading them into a Deck (plays via main output)">PREVIEW</span>
+            <button id="pvPlay" class="btn sm" title="Play / pause preview of the selected track">⏵</button>
+            <button id="pvStop" class="btn sm" title="Stop preview">⏹</button>
+            <div class="pvprog"><i id="pvFill"></i></div>
+            <div id="pvVol"></div>
             <span class="hint">dbl-click / Enter = load to free deck</span>
           </div>
           <div id="tblwrap"><table id="libtable"><thead><tr></tr></thead><tbody></tbody></table></div>
+          <div id="libstatus"><span id="libstat">Ready</span><span class="grow"></span><span id="libstat2"></span></div>
         </div>
       </div>`;
     this.treeEl = this.root.querySelector("#tree");
+    this._bindTree();
     this.tbody = this.root.querySelector("#libtable tbody");
     this.root.querySelectorAll(".libtab").forEach((b) => b.addEventListener("click", () => {
       this.tab = b.dataset.tab;
@@ -104,16 +117,34 @@ export class Library {
 
   _buildTree() {
     const dirs = this._dirs();
-    let html = `<div class="tnode sel" data-dir=""><span class="tname">All Tracks</span><span class="tcount">${this.tracks.length}</span></div>`;
+    const favBlock = (d) => `<div class="tnode fav ${this.filterDir === d ? "sel" : ""}" data-dir="${esc(d)}" style="padding-left:8px">
+        <span class="tstar-on">★</span><span class="texp"></span><span class="tname">${esc(d)}</span>
+        <span class="tcount">${this.tracks.filter((t) => t.dir === d || t.dir.startsWith(d + "/")).length}</span></div>`;
+    let html = this.favs.length
+      ? `<div class="tnode sel" data-dir=""><span class="texp"></span><span class="tname">All Tracks</span><span class="tcount">${this.tracks.length}</span></div>` +
+        `<div class="tsec">FAVORITES</div>` + this.favs.map(favBlock).join("") + `<div class="tsec">FOLDERS</div>`
+      : `<div class="tnode sel" data-dir=""><span class="texp"></span><span class="tname">All Tracks</span><span class="tcount">${this.tracks.length}</span></div>`;
     for (const d of dirs) {
       const depth = d.split("/").length - 1;
       const count = this.tracks.filter((t) => t.dir === d || t.dir.startsWith(d + "/")).length;
       const hasKids = dirs.some((x) => x.length > d.length && x.startsWith(d + "/"));
-      html += `<div class="tnode" data-dir="${esc(d)}" style="padding-left:${8 + depth * 14}px">
+      const fav = this.favs.includes(d);
+      html += `<div class="tnode ${this.filterDir === d ? "sel" : ""}" data-dir="${esc(d)}" style="padding-left:${8 + depth * 14}px">
+        <button class="tstar ${fav ? "on" : ""}" data-star="${esc(d)}" title="Add / remove from Favorites">★</button>
         <span class="texp">${hasKids ? "▸" : ""}</span><span class="tname">${esc(d.split("/").pop())}</span><span class="tcount">${count}</span></div>`;
     }
     this.treeEl.innerHTML = html;
+  }
+
+  _bindTree() {
     this.treeEl.addEventListener("click", (e) => {
+      if (e.target.classList.contains("tstar") || e.target.classList.contains("tstar-on")) {
+        const d = e.target.dataset.star || e.target.closest(".tnode").dataset.dir;
+        this.favs = this.favs.includes(d) ? this.favs.filter((x) => x !== d) : this.favs.concat(d);
+        try { localStorage.setItem("ta-favs", JSON.stringify(this.favs)); } catch {}
+        this._buildTree();
+        return;
+      }
       const n = e.target.closest(".tnode");
       if (!n) return;
       if (e.target.classList.contains("texp") && n.dataset.dir) {
@@ -131,6 +162,14 @@ export class Library {
       this.filterDir = n.dataset.dir || null;
       this.render();
     });
+  }
+
+  /** Status bar: progress, messages, overall status. */
+  status(msg, msg2) {
+    const a = this.root.querySelector("#libstat");
+    const b = this.root.querySelector("#libstat2");
+    if (a) a.textContent = msg;
+    if (b && msg2 !== undefined) b.textContent = msg2;
   }
 
   _syncTabs() {
