@@ -388,7 +388,8 @@ function buildUnit(n, slotSel) {
   cfg.querySelectorAll("option")[2].textContent = n + " PATTERN";
   const setMode = (m) => {
     unit.setMode(m);
-    q(".u-sels").classList.toggle("hidden", m !== "group");
+    q(".u-sels").classList.toggle("hidden", m === "pattern");
+    slots.forEach((s, i) => s.sel.classList.toggle("hidden", m === "single" && i > 0));
     q(".u-param").classList.toggle("hidden", m !== "group");
     single.classList.toggle("hidden", m !== "single");
     q(".u-pat").classList.toggle("hidden", m !== "pattern");
