@@ -323,3 +323,27 @@
 20/Oct/2026 17:41:22 "GET /audio/Singles/pl4/(Dj%20Tools)%20%20Acapella%20Of%20'the%20Ultimate%20Seduction'.mp3 HTTP/1.1" 200 -
 20/Oct/2026 17:41:23 "POST /api/log HTTP/1.1" 204 -
 20/Oct/2026 17:41:28 "POST /api/log HTTP/1.1" 204 -
+20/Oct/2026 22:26:25 "GET / HTTP/1.1" 200 -
+20/Oct/2026 22:26:25 "GET /css/app.css HTTP/1.1" 200 -
+20/Oct/2026 22:26:25 "GET /js/main.js HTTP/1.1" 200 -
+20/Oct/2026 22:26:25 "GET /js/waveform.js HTTP/1.1" 200 -
+20/Oct/2026 22:26:25 "GET /js/audio/deck.js HTTP/1.1" 200 -
+20/Oct/2026 22:26:25 "GET /js/audio/rec.js HTTP/1.1" 200 -
+20/Oct/2026 22:26:25 "GET /js/audio/engine.js HTTP/1.1" 200 -
+20/Oct/2026 22:26:25 "GET /js/audio/preview.js HTTP/1.1" 200 -
+20/Oct/2026 22:26:25 "GET /js/audio/fx.js HTTP/1.1" 200 -
+20/Oct/2026 22:26:25 "GET /js/midi/midi.js HTTP/1.1" 200 -
+20/Oct/2026 22:26:25 "GET /js/library.js HTTP/1.1" 200 -
+20/Oct/2026 22:26:25 "GET /js/midi/monitor.js HTTP/1.1" 200 -
+20/Oct/2026 22:26:25 "GET /js/ui.js HTTP/1.1" 200 -
+20/Oct/2026 22:26:25 "GET /js/analysis/analyze.js HTTP/1.1" 200 -
+20/Oct/2026 22:26:25 "GET /js/server-api.js HTTP/1.1" 200 -
+20/Oct/2026 22:26:25 "GET /js/util.js HTTP/1.1" 200 -
+20/Oct/2026 22:26:25 "GET /js/midi/mapping.js HTTP/1.1" 200 -
+20/Oct/2026 22:26:25 "GET /js/idb.js HTTP/1.1" 200 -
+20/Oct/2026 22:26:25 "GET /js/analysis/analysis-worker.js HTTP/1.1" 304 -
+20/Oct/2026 22:26:25 "GET /js/audio/deck-processor.js HTTP/1.1" 304 -
+20/Oct/2026 22:26:25 code 404, message File not found
+20/Oct/2026 22:26:25 "GET /favicon.ico HTTP/1.1" 404 -
+20/Oct/2026 22:26:26 "GET /api/tracks HTTP/1.1" 200 -
+20/Oct/2026 22:26:26 "GET /js/midi/mapping-override.json HTTP/1.1" 200 -

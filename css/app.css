@@ -186,10 +186,11 @@ select {
 .s-meter { width: 9px; height: 118px; background: #0c0d0f; border-radius: 2px; }
 .s-vol { height: 118px; display: flex; align-items: center; }
 .s-key { font-size: 10px; font-weight: 700; color: #666; height: 14px; }
-#xfrow { display: flex; flex-wrap: wrap; align-items: center; gap: 4px 6px; padding: 0 6px; }
+#xfrow { display: flex; align-items: center; gap: 6px; padding: 0 6px; }
 .xf-lab { font-size: 10px; color: var(--dim); font-weight: 700; }
-#xfader { flex: 1 1 70px; min-width: 70px; }
-#cueKnob { flex: none; }
+#xfader { flex: 1; min-width: 70px; }
+/* Headphone Cue + AUX row — bottom of the Mixer, per doc (3)(4)(5) */
+#hprow { display: flex; align-items: flex-end; gap: 6px; padding: 0 6px; }
 
 /* ================= Knobs / faders ================= */
 .knobwrap { display: flex; flex-direction: column; align-items: center; gap: 1px; }
@@ -402,7 +403,7 @@ body.maxb #library { flex: 1 1 auto; }
 .xfb { font-size: 8px; padding: 3px 5px; color: #8b8d93; }
 .xfb.err { color: #e05c5c; border-color: #7a3030; }
 .xfb.on, #auxBtn.on { color: #0d0e10; background: #4fd74f; border-color: #4fd74f; }
-#auxKnob .knob { --ks: 24px; }
+#auxKnob .knob, #cueKnob .knob { --ks: 24px; }
 
 /* ============ WP6: browser tree favorites, preview, status bar ============ */
 #tblwrap { flex: 1; }
