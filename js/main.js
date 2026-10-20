@@ -2,7 +2,7 @@ import { Deck } from "./audio/deck.js";
 import { HC_COLORS } from "./audio/deck.js";
 import { DeckScope } from "./waveform.js";
 import { Engine } from "./audio/engine.js";
-import { FX_TYPES } from "./audio/fx.js";
+import { FX_TYPES, FX_BUTTONS } from "./audio/fx.js";
 import { AudioRecorder, LoopRecorder } from "./audio/rec.js";
 import { Library } from "./library.js";
 import { MidiHub, BEATLOOP_SIZES } from "./midi/midi.js";
@@ -220,19 +220,22 @@ function buildUnit(n, slotSel) {
   host.replaceWith(tpl);
   tpl.id = "unit" + n;
   const q = (s) => tpl.querySelector(s);
-  q(".u-num").textContent = n + ":";
+  q(".u-num").textContent = n;
+  unit.tempoFn = () => masterTempo() || 120;
 
   const dwKnob = makeKnob({ label: "D/W", value: 0.5, bipolar: false, onInput: (v) => unit.setDw(v) });
   q(".u-dw").appendChild(dwKnob.el);
 
   const typeOpts = `<option value="">—</option>` +
     Object.entries(FX_TYPES).map(([k, v]) => `<option value="${k}">${v.label}</option>`).join("");
+
+  // Group FX mode: FX selectors 1-3 + Effect Amount knobs + Effect On buttons
   const slots = unit.slots.map((chain, si) => {
     const sel = document.createElement("select");
     sel.className = "u-sel";
     sel.innerHTML = typeOpts;
     q(".u-sels").appendChild(sel);
-    const knob = makeKnob({ label: "P1", value: 0.5, bipolar: false, onInput: (v) => chain.setP1(v) });
+    const knob = makeKnob({ label: "AMT", value: 0.5, bipolar: false, onInput: (v) => chain.setMix(v) });
     const btn = document.createElement("button");
     btn.className = "btn u-fxb";
     btn.textContent = "OFF";
@@ -242,30 +245,148 @@ function buildUnit(n, slotSel) {
     q(".u-param").appendChild(pcol);
     const relabel = () => {
       const F = FX_TYPES[chain.type];
-      knob.el.querySelector(".knob-label").textContent = F ? F.p1 : "P1";
       btn.textContent = chain.enabled && F ? F.label : "OFF";
       btn.classList.toggle("on", chain.enabled && !!F);
     };
     const setType = (t) => {
       sel.value = t || "";
       chain.setType(t);
-      if (t) knob.set(chain.p1, false);
+      knob.set(chain.mix, false);
       relabel();
+      syncSingle();
+    };
+    const toggle = () => {
+      if (!chain.type) return;
+      chain.setEnabled(!chain.enabled);
+      relabel();
+      syncSingle();
     };
     const cycle = () => {
       const keys = Object.keys(FX_TYPES);
       setType(keys[keys.indexOf(chain.type) + 1] || keys[0]);
     };
-    const toggle = () => { chain.setEnabled(!chain.enabled); relabel(); };
-    btn.addEventListener("click", () => { if (chain.type) toggle(); });
+    btn.addEventListener("click", toggle);
     sel.addEventListener("change", () => setType(sel.value || null));
-    return { chain, knob, btn, sel, setType, cycle, toggle, relabel };
+    return { chain, knob, btn, sel, setType, toggle, cycle, relabel };
   });
 
-  const rst = () => { unit.reset(); for (const s of slots) s.knob.set(s.chain.p1, false); };
+  // Single FX mode: full parameter control of the first effect
+  const s1 = unit.slots[0];
+  const single = document.createElement("div");
+  single.className = "u-single hidden";
+  const kP1 = makeKnob({ label: "P1", value: 0.45, bipolar: false, onInput: (v) => s1.setP1(v) });
+  const kP2 = makeKnob({ label: "P2", value: 0.4, bipolar: false, onInput: (v) => s1.setP2(v) });
+  const kMix = makeKnob({ label: "AMT", value: 0.6, bipolar: false, onInput: (v) => s1.setMix(v) });
+  const onBtn = document.createElement("button");
+  onBtn.className = "btn u-on";
+  onBtn.textContent = "FX ON";
+  const bcols = [0, 1, 2].map(() => {
+    const b = document.createElement("button");
+    b.className = "btn u-b";
+    b.textContent = "-";
+    return b;
+  });
+  single.append(kP1.el, kP2.el, kMix.el, ...bcols, onBtn);
+  q(".u-singlewrap").appendChild(single);
+  onBtn.addEventListener("click", () => { if (s1.type) { s1.setEnabled(!s1.enabled); syncSingle(); } });
+  const syncSingle = () => {
+    const F = FX_TYPES[s1.type];
+    kP1.el.querySelector(".knob-label").textContent = F ? F.p1 : "P1";
+    kP2.el.querySelector(".knob-label").textContent = F ? F.p2 : "P2";
+    kP1.set(s1.p1, false);
+    kP2.set(s1.p2, false);
+    kMix.set(s1.mix, false);
+    onBtn.classList.toggle("on", s1.enabled && !!F);
+    onBtn.textContent = F && s1.enabled ? F.label.toUpperCase() : "FX ON";
+    const B = F && FX_BUTTONS[s1.type];
+    bcols.forEach((b, i) => {
+      b.textContent = B ? B[i][0] : "-";
+      b.disabled = !B;
+      b.classList.toggle("on", !!B && Math.abs(s1.p1 - B[i][1]) < 0.02);
+    });
+  };
+  bcols.forEach((b, i) => b.addEventListener("click", () => {
+    const B = FX_BUTTONS[s1.type];
+    if (!B) return;
+    s1.setP1(B[i][1]);
+    s1.setP2(B[i][2]);
+    if (!s1.enabled && s1.type) s1.setEnabled(true);
+    syncSingle();
+  }));
+
+  // Pattern Player mode
+  const pat = unit.pat;
+  const kitSel = q(".u-kit");
+  kitSel.innerHTML = pat.kit.map((k, i) => `<option value="${i}">${k}</option>`).join("");
+  const kPat = makeKnob({ label: "PATTERN", value: 0.33, bipolar: false, onInput: (v) => pat.setPattern(Math.floor(v * pat.patternCount)) });
+  const kPitch = makeKnob({ label: "PITCH", value: 0.5, bipolar: false, onInput: (v) => pat.setPitch(Math.round((v - 0.5) * 24)) });
+  const kDec = makeKnob({ label: "DECAY", value: 0.4, bipolar: false, onInput: (v) => pat.setDecay(v) });
+  const kVol = makeKnob({ label: "VOL", value: 0.8, bipolar: false, onInput: (v) => pat.setVol(v) });
+  q(".u-pknobs").append(kPat.el, kPitch.el, kDec.el, kVol.el);
+  const drawViz = () => {
+    const cv = q(".u-viz");
+    const g = cv.getContext("2d");
+    const W = cv.width, H = cv.height;
+    g.clearRect(0, 0, W, H);
+    const st = pat.steps();
+    const bw = W / 16;
+    for (let i = 0; i < 16; i++) {
+      g.fillStyle = st[i] ? "#5aa7e0" : "#2a2c31";
+      g.fillRect(i * bw + 1, 2, bw - 2, H - 4);
+    }
+    if (pat.playing && pat._vis != null) {
+      g.fillStyle = "#e08a2e";
+      g.fillRect((pat._vis % 16) * bw, 0, 2, H);
+    }
+  };
+  q(".u-prev").addEventListener("click", () => { pat.setSample(pat.sample - 1); kitSel.value = pat.sample; });
+  q(".u-next").addEventListener("click", () => { pat.setSample(pat.sample + 1); kitSel.value = pat.sample; });
+  kitSel.addEventListener("change", () => pat.setSample(+kitSel.value));
+  const duckBtn = q(".u-duck");
+  duckBtn.addEventListener("click", () => {
+    pat.setDuck(!pat.duck);
+    duckBtn.classList.toggle("on", pat.duck);
+  });
+  const playBtn = q(".u-play");
+  playBtn.addEventListener("click", () => {
+    if (pat.playing) pat.stop();
+    else { engine.resume(); pat.start(); }
+    playBtn.classList.toggle("on", pat.playing);
+    playBtn.textContent = pat.playing ? "STOP" : "PLAY";
+  });
+
+  // FX Unit config: mode selection + snapshots
+  const cfg = q(".u-config");
+  cfg.querySelectorAll("option")[0].textContent = n + " SINGLE";
+  cfg.querySelectorAll("option")[1].textContent = n + " GROUP";
+  cfg.querySelectorAll("option")[2].textContent = n + " PATTERN";
+  const setMode = (m) => {
+    unit.setMode(m);
+    q(".u-sels").classList.toggle("hidden", m !== "group");
+    q(".u-param").classList.toggle("hidden", m !== "group");
+    single.classList.toggle("hidden", m !== "single");
+    q(".u-pat").classList.toggle("hidden", m !== "pattern");
+    q(".u-rst").classList.toggle("hidden", m === "pattern");
+    if (m === "single") syncSingle();
+    if (m === "pattern") drawViz();
+    cfg.value = m;
+  };
+  cfg.addEventListener("change", () => {
+    if (cfg.value === "snapSave") { unit.saveSnapshot(); cfg.value = unit.mode; return; }
+    if (cfg.value === "snapRec") {
+      if (unit.recallSnapshot()) { dwKnob.set(unit.dw, false); slots.forEach((s) => s.relabel()); syncSingle(); }
+      cfg.value = unit.mode;
+      return;
+    }
+    setMode(cfg.value);
+  });
+
+  const rst = () => { unit.reset(); slots.forEach((s) => s.relabel()); syncSingle(); };
   q(".u-rstb").addEventListener("click", rst);
 
-  fxUIs[n - 1] = { unit, slots, dwKnob, rst };
+  setMode("group");
+  syncSingle();
+  fxUIs[n - 1] = { unit, slots, dwKnob, rst, syncSingle, drawViz };
 }
 
 // ---- master control panel ----
@@ -572,8 +693,8 @@ function handleMidi(a, c) {
     switch (what) {
       case "on": if (s.chain.type) s.toggle(); break;
       case "type": if (c.pressed !== false) s.cycle(); break;
-      case "mix": s.chain.setMix(c.value); break;
-      case "p1": s.chain.setP1(c.value); s.knob.set(c.value, false); s.relabel(); break;
+      case "mix": s.chain.setMix(c.value); s.knob.set(c.value, false); break;
+      case "p1": s.chain.setP1(c.value); s.relabel(); break;
       case "p2": s.chain.setP2(c.value); break;
     }
     return;
@@ -668,6 +789,8 @@ function frame() {
   for (const u of fxUIs) {
     if (!u) continue;
     for (const s of u.slots) s.relabel();
+    if (u.unit.mode === "single") u.syncSingle();
+    else if (u.unit.mode === "pattern") u.drawViz();
   }
   const mt = masterTempo();
   const mtEl = $("#mTempo");

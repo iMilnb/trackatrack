@@ -149,10 +149,31 @@
 
 <template id="unitTpl">
   <div class="fxunit">
-    <div class="u-num">1:</div>
+    <div class="u-top">
+      <span class="u-num">1</span>
+      <select class="u-config" title="FX Unit config — mode &amp; snapshots">
+        <option value="single">1 SINGLE</option>
+        <option value="group" selected>1 GROUP</option>
+        <option value="pattern">1 PATTERN</option>
+        <option value="snapSave">Save snapshot</option>
+        <option value="snapRec">Recall snapshot</option>
+      </select>
+    </div>
     <div class="u-dw"></div>
     <div class="u-sels"></div>
     <div class="u-param"></div>
+    <div class="u-singlewrap"></div>
+    <div class="u-pat hidden">
+      <div class="u-pat-top">
+        <button class="btn u-prev" title="Previous sample">◀</button>
+        <select class="u-kit" title="Kit display — sample selection"></select>
+        <button class="btn u-next" title="Next sample">▶</button>
+        <button class="btn u-duck" title="Ducking on/off — sidechain the deck to the pattern">DUCK</button>
+        <button class="btn u-play" title="Play/Stop — pattern syncs to Master Clock">PLAY</button>
+      </div>
+      <canvas class="u-viz" width="160" height="16" title="Pattern visualization"></canvas>
+      <div class="u-pknobs"></div>
+    </div>
     <div class="u-rst"><button class="btn u-rstb" title="Reset all unit parameters">RST</button></div>
   </div>
 </template>

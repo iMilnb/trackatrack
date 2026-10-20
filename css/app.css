@@ -356,3 +356,35 @@ body.maxb #library { flex: 1 1 auto; }
 .s-lock.on { color: #0d0e10; background: #5aa7e0; border-color: #5aa7e0; }
 .s-keyk .knob { transform: scale(.7); transform-origin: top left; }
 #deckslotA .deckmod.focused .d-letter, #deckslotB .deckmod.focused .d-letter { color: #14100a !important; background: #e08a2e; }
+
+/* ============ WP4: FX unit modes ============ */
+.hidden { display: none !important; }
+.u-top { display: flex; gap: 4px; align-items: center; padding: 0 2px; }
+.u-top .u-num { font-size: 11px; font-weight: 700; color: #cfd2d8; background: #26272b; border-radius: 3px; padding: 1px 5px; }
+.u-config { flex: 1; background: #101114; color: #cfd2d8; border: 1px solid #33353a; border-radius: 3px; font-size: 9px; padding: 2px; letter-spacing: 1px; }
+.u-single { display: flex; flex-wrap: wrap; gap: 2px 3px; align-items: center; padding: 2px; }
+.u-single .btn.u-b { width: 36px; font-size: 8px; padding: 4px 0; color: #8b8d93; }
+.u-single .btn.u-b:disabled { opacity: .35; }
+.u-single .btn.u-on { width: 100%; font-size: 9px; padding: 4px 0; letter-spacing: 1px; color: #9a9ca2; }
+.u-on.on { background: #e0b04f; border-color: #e0b04f; color: #171204; font-weight: 700; } /* doc: FX On lights yellow */
+.u-b.on { color: #0d0e10; background: #5aa7e0; border-color: #5aa7e0; }
+.u-pat { display: flex; flex-direction: column; gap: 3px; width: 100%; padding: 2px; }
+.u-pat-top { display: flex; gap: 3px; align-items: center; }
+.u-kit { flex: 1; background: #101114; color: #cfd2d8; border: 1px solid #33353a; border-radius: 3px; font-size: 9px; padding: 2px; min-width: 0; }
+.u-prev, .u-next { padding: 3px 5px; font-size: 8px; }
+.u-duck, .u-play { font-size: 8px; padding: 3px 5px; color: #8b8d93; }
+.u-duck.on { color: #0d0e10; background: #5aa7e0; border-color: #5aa7e0; }
+.u-play.on { color: #0d140d; background: #4fd74f; border-color: #4fd74f; font-weight: 700; }
+.u-viz { width: 100%; height: 16px; background: #17181b; border: 1px solid #2a2c31; border-radius: 2px; }
+.u-pknobs { display: flex; gap: 2px; justify-content: space-between; }
+.u-pknobs .knob { transform: scale(.78); transform-origin: top left; }
+
+/* WP4 fix: global section flex (hidden panels removed cleanly) */
+#globalsec { display: flex; align-items: stretch; }
+#globalsec .fxunit { flex: 1 1 0; min-width: 0; }
+#mctrl { flex: none; width: 320px; }
+.sel-col { flex: none; }
+.fxunit { display: flex; flex-wrap: wrap; align-content: center; align-items: center; row-gap: 5px; }
+.u-top { flex: 1 1 100%; }
+.u-singlewrap { flex: 1; min-width: 0; }
+.u-pat { flex: 1; min-width: 0; }
