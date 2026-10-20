@@ -76,7 +76,7 @@ export class Deck {
     this.kills = { hi: false, mid: false, low: false };
     this._eqv = { hi: 0.5, mid: 0.5, low: 0.5 };
     this.pflGain = ctx.createGain(); this.pflGain.gain.value = 0;
-    this.preFader.connect(this.pflGain).connect(this.engine.cueDest);
+    this.preFader.connect(this.pflGain).connect(this.engine.cueSend);
     this.meter = ctx.createAnalyser(); this.meter.fftSize = 1024;
     this._m_buf = new Float32Array(1024);
     this.vol.connect(this.meter);

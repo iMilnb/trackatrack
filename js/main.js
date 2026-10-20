@@ -181,16 +181,16 @@ function buildStrip(i, letter) {
   q(".s-letter").textContent = letter;
   const deck = decks[i].deck;
   const knobs = {};
-  for (const [k, label, cb] of [
-    ["gain", "GAIN", (v) => deck.setGain(v)],
-    ["hi", "HI", (v) => deck.setEq("hi", v)],
-    ["mid", "MID", (v) => deck.setEq("mid", v)],
-    ["low", "LOW", (v) => deck.setEq("low", v)],
-    ["fltr", "FLTR", (v) => deck.setFilter(v)],
+  for (const [k, label, cb, host] of [
+    ["gain", "GAIN", (v) => deck.setGain(v), ".s-gk"],
+    ["hi", "HI", (v) => deck.setEq("hi", v), ".s-hk"],
+    ["mid", "MID", (v) => deck.setEq("mid", v), ".s-mk"],
+    ["low", "LOW", (v) => deck.setEq("low", v), ".s-lk"],
+    ["fltr", "FLTR", (v) => deck.setFilter(v), ".s-fk"],
   ]) {
     const kn = makeKnob({ label, value: 0.5, onInput: cb });
     knobs[k] = kn;
-    q(".s-knobs").appendChild(kn.el);
+    q(host).appendChild(kn.el);
   }
   const setRoute = (r) => { deck.route = deck.route === r ? null : r; applyFxRouting(); };
   const sfx1 = q(".sfx1"), sfx2 = q(".sfx2");
@@ -922,8 +922,11 @@ function frame() {
     applyMixer();
     masterMeter = makeMeter($("#masterMeter"), false);
 
-    const cueKnob = makeKnob({ label: "CUE", value: 0.7, bipolar: false, onInput: (v) => engine.setCueLevel(v) });
+    const cueKnob = makeKnob({ label: "CUE MIX", value: 0.85, bipolar: false, onInput: (v) => engine.setCueMix(v) });
     $("#cueKnob").appendChild(cueKnob.el);
+    const cueVol = makeKnob({ label: "CUE VOL", value: 0.7, bipolar: false, onInput: (v) => engine.setCueLevel(v) });
+    $("#cueVolKnob").appendChild(cueVol.el);
+    engine.setCueMix(0.85);
     engine.setCueLevel(0.7);
     wireMasterControl();
     wireGlobalPanels();

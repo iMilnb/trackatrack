@@ -30,6 +30,11 @@ export class Engine {
     this.cueGain = this.cueCtx.createGain();
     this.cueGain.gain.value = 0.7;
     this.cueSrc.connect(this.cueGain).connect(this.cueCtx.destination);
+    // MIX knob semantics: headphones = MIX*cue + (1-MIX)*master  (VOL = cueGain)
+    this.cueSend = ctx.createGain();
+    this.cueSend.connect(this.cueDest);
+    this.cueMixGain = ctx.createGain();
+    this.masterAnalyser.connect(this.cueMixGain).connect(this.cueDest);
 
     this.masterDeck = 0;
     this.quantize = 4; // beats; 0 = off
@@ -57,6 +62,7 @@ export class Engine {
 
   setMasterVolume(v) { this.masterVol.gain.value = v * v * 1.4; }
   setCueLevel(v) { this.cueGain.gain.value = v * v * 1.6; }
+  setCueMix(v) { this.cueSend.gain.value = v; this.cueMixGain.gain.value = 1 - v; }
 
   setLimiter(on) {
     this.limiterOn = on;
