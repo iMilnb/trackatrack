@@ -8,7 +8,7 @@ from http.server import ThreadingHTTPServer, SimpleHTTPRequestHandler
 from urllib.parse import unquote, quote
 
 APP_DIR = os.path.dirname(os.path.abspath(__file__))
-CACHE_FILE = os.path.join(APP_DIR, ".library-cache.json")
+CACHE_FILE = os.path.join(APP_DIR, ".library-cache-v2.json")
 AUDIO_EXTS = {".mp3", ".wav", ".flac", ".ogg", ".oga", ".m4a", ".aac", ".opus"}
 
 CFG = {"music_dir": os.path.expanduser("~/Music"), "cache": None}
@@ -21,7 +21,7 @@ MEDIA_TYPES = {
 
 def read_tags(path, fallback_title):
     """Best-effort tag read via mutagen; never raises."""
-    t = {"title": fallback_title, "artist": "", "album": "", "bpm": None, "key": "", "duration": None}
+    t = {"title": fallback_title, "artist": "", "album": "", "bpm": None, "key": "", "genre": "", "duration": None}
     try:
         from mutagen import File as MFile
         f = MFile(path)
@@ -65,6 +65,12 @@ def read_tags(path, fallback_title):
             except ValueError:
                 pass
         t["key"] = first("TKEY", "initial_key", "key", "KEY") or t["key"]
+        genre = first("TCON", "genre", "GENRE")
+        if genre:
+            g = genre.strip()
+            if g.startswith("(") and ")" in g:  # ID3 numeric genre like "(17)Electronica"
+                g = g.split(")", 1)[1].strip()
+            t["genre"] = g
     except Exception:
         pass
     return t
