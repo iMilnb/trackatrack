@@ -207,6 +207,31 @@ function buildStrip(i, letter) {
   });
   const keyk = makeKnob({ label: "KEY", value: 0.5, onInput: (v) => deck.setTranspose((v - 0.5) * 12) });
   q(".s-keyk").appendChild(keyk.el);
+  const panK = makeKnob({ label: "PAN", value: 0.5, onInput: (v) => deck.setPan((v - 0.5) * 2) });
+  q(".s-pank").appendChild(panK.el);
+  for (const b of el.querySelectorAll(".s-kills .k")) {
+    const kind = b.dataset.k;
+    b.addEventListener("click", () => {
+      deck.killEq(kind, !deck.kills[kind]);
+      b.classList.toggle("on", deck.kills[kind]);
+    });
+  }
+  const mxSel = q(".s-mxsel");
+  mxSel.innerHTML = `<option value="">MIX FX</option>` +
+    Object.entries(FX_TYPES).map(([k, v]) => `<option value="${k}">${v.label}</option>`).join("");
+  const mxOn = q(".s-mxon");
+  const mxKnob = makeKnob({ label: "AMT", value: 0.5, bipolar: false, onInput: (v) => deck.mixFx.setMix(v) });
+  q(".s-mxk").appendChild(mxKnob.el);
+  mxSel.addEventListener("change", () => {
+    deck.setMixerFx(mxSel.value || null);
+    if (mxSel.value && !deck.mixFx.enabled) deck.mixFx.setEnabled(true);
+    mxOn.classList.toggle("on", deck.mixFx.enabled && !!mxSel.value);
+  });
+  mxOn.addEventListener("click", () => {
+    if (!deck.mixFx.type) return;
+    deck.mixFx.setEnabled(!deck.mixFx.enabled);
+    mxOn.classList.toggle("on", deck.mixFx.enabled);
+  });
   mixer.strips[i] = { el, deck, knobs, vol, meter, pfl, sfx1, sfx2, keyEl: q(".s-key"), lastKey: "" };
 }
 
@@ -870,6 +895,49 @@ function frame() {
     engine.setCueLevel(0.7);
     wireMasterControl();
     wireGlobalPanels();
+
+    // Crossfader: fade left/right + auto fade (doc: Crossfade Controls)
+    const xfGlide = (target, ms) => {
+      if (xfGlide._raf) cancelAnimationFrame(xfGlide._raf);
+      const s = mixer.xf, t0 = performance.now();
+      const stepFn = () => {
+        const k = Math.min(1, (performance.now() - t0) / ms);
+        mixer.xf = s + (target - s) * k;
+        mixer.xfFader.set(mixer.xf);
+        applyMixer();
+        xfGlide._raf = k < 1 ? requestAnimationFrame(stepFn) : null;
+      };
+      stepFn();
+    };
+    $("#xfLeft").addEventListener("click", () => xfGlide(clamp(mixer.xf - 0.25, 0, 1), 180));
+    $("#xfRight").addEventListener("click", () => xfGlide(clamp(mixer.xf + 0.25, 0, 1), 180));
+    $("#xfAutoL").addEventListener("click", () => xfGlide(0, 700));
+    $("#xfAutoR").addEventListener("click", () => xfGlide(1, 700));
+
+    // AUX control: external input (microphone) into the master mix
+    let auxGain = null, auxOn = true, auxVal = 0.7;
+    const auxKnob = makeKnob({ label: "AUX", value: 0.7, bipolar: false, onInput: (v) => { auxVal = v; if (auxGain) auxGain.gain.value = auxOn ? v : 0; } });
+    $("#auxKnob").appendChild(auxKnob.el);
+    $("#auxBtn").addEventListener("click", async (e) => {
+      const b = e.currentTarget;
+      if (!auxGain) {
+        try {
+          const st = await navigator.mediaDevices.getUserMedia({ audio: true });
+          auxGain = engine.ctx.createGain();
+          engine.ctx.createMediaStreamSource(st).connect(auxGain).connect(engine.masterVol);
+          auxGain.gain.value = auxVal;
+          auxOn = true;
+          b.classList.add("on");
+        } catch (err) {
+          b.title = "AUX unavailable: " + err.message;
+          b.classList.add("err");
+        }
+      } else {
+        auxOn = !auxOn;
+        auxGain.gain.value = auxOn ? auxVal : 0;
+        b.classList.toggle("on", auxOn);
+      }
+    });
 
     try {
       const devs = await Promise.race([

@@ -78,8 +78,14 @@
       <span class="xf-lab">A</span>
       <div id="xfader"></div>
       <span class="xf-lab">B</span>
+      <button id="xfLeft" class="btn xfb" title="Fade left">◀</button>
+      <button id="xfRight" class="btn xfb" title="Fade right">▶</button>
+      <button id="xfAutoL" class="btn xfb" title="Auto fade to left">◀◀</button>
+      <button id="xfAutoR" class="btn xfb" title="Auto fade to right">▶▶</button>
       <span class="grow"></span>
-      <div id="cueKnob"></div>
+      <button id="auxBtn" class="btn xfb" title="AUX control — external input (microphone)">AUX</button>
+      <div id="auxKnob"></div>
+      <div id="cueKnob" title="Headphone Cue — ratio of cue signal to master signal"></div>
     </div>
   </div>
   <div class="deckslot" id="deckslotB"></div>
@@ -248,10 +254,20 @@
   <div class="strip">
     <div class="s-letter">A</div>
     <div class="s-knobs"></div>
+    <div class="s-kills">
+      <button class="btn k" data-k="hi" title="Kill — takes the high frequencies completely out">HI</button>
+      <button class="btn k" data-k="mid" title="Kill — takes the mid frequencies completely out">MID</button>
+      <button class="btn k" data-k="low" title="Kill — takes the low frequencies completely out">LOW</button>
+    </div>
     <div class="s-fxbtns">
       <button class="btn sfx1" title="Route this channel to FX Unit 1">1</button>
       <button class="btn sfx2" title="Route this channel to FX Unit 2">2</button>
       <span class="sfx-label">FX</span>
+    </div>
+    <div class="s-mixfx">
+      <select class="s-mxsel" title="Mixer FX drop-down menu"></select>
+      <div class="s-mxk"></div>
+      <button class="btn s-mxon" title="Mixer FX On">FX</button>
     </div>
     <div class="s-low">
       <div class="s-vol"></div>
@@ -261,6 +277,7 @@
     <div class="s-keyrow">
       <button class="btn s-lock" title="Key Lock — preserve pitch when tempo changes (browser engine: limited)">LOCK</button>
       <div class="s-keyk"></div>
+      <div class="s-pank"></div>
       <span class="s-key"></span>
     </div>
   </div>

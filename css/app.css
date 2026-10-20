@@ -388,3 +388,19 @@ body.maxb #library { flex: 1 1 auto; }
 .u-top { flex: 1 1 100%; }
 .u-singlewrap { flex: 1; min-width: 0; }
 .u-pat { flex: 1; min-width: 0; }
+
+/* ============ WP5: mixer channel additions ============ */
+.s-kills { display: flex; gap: 6px; justify-content: center; padding-top: 2px; }
+.s-kills .btn.k { font-size: 7px; padding: 2px 5px; color: #7d7f85; }
+.s-kills .btn.k:nth-child(1) { margin-left: 34px; }
+.s-kills .btn.k.on { color: #0d0e10; background: #d05c5c; border-color: #d05c5c; font-weight: 700; }
+.s-mixfx { display: flex; align-items: center; gap: 3px; padding-top: 3px; }
+.s-mxsel { flex: 1; min-width: 0; background: #0d0e10; color: var(--text); border: 1px solid #3a3d42; border-radius: 3px; font-size: 8px; padding: 2px; }
+.s-mixfx .btn.s-mxon { font-size: 8px; padding: 3px 4px; color: #8b8d93; }
+.s-mixfx .btn.s-mxon.on { background: #e0b04f; border-color: #e0b04f; color: #171204; font-weight: 700; }
+.s-mxk .knob { transform: scale(.62); transform-origin: top left; }
+.s-pank .knob { transform: scale(.68); transform-origin: top left; }
+.xfb { font-size: 8px; padding: 3px 5px; color: #8b8d93; }
+.xfb.err { color: #e05c5c; border-color: #7a3030; }
+.xfb.on, #auxBtn.on { color: #0d0e10; background: #4fd74f; border-color: #4fd74f; }
+#auxKnob .knob { transform: scale(.8); transform-origin: top left; }

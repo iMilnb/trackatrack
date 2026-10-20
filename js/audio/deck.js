@@ -1,4 +1,5 @@
 import { clamp, fmtTime, parseKey, camelotColor } from "../util.js";
+import { FxChain } from "./fx.js";
 import { audioURL } from "../server-api.js";
 import { analyzeTrack } from "../analysis/analyze.js";
 
@@ -67,8 +68,13 @@ export class Deck {
     this.node.connect(this.trim).connect(this.lo).connect(this.mid).connect(this.hi)
       .connect(this.fltLo).connect(this.fltHi).connect(this.preFader);
     this.fxIn = ctx.createGain(); // FX-unit routing point (reconnected by applyFxRouting)
-    this.preFader.connect(this.fxIn);
-    this.fxIn.connect(this.vol).connect(this.engine.masterVol);
+    this.mixFx = new FxChain(ctx); // Mixer FX (per channel, doc: Mixer FX On + Amount)
+    this.preFader.connect(this.mixFx.in);
+    this.mixFx.out.connect(this.fxIn);
+    this.pan = ctx.createStereoPanner();
+    this.fxIn.connect(this.vol).connect(this.pan).connect(this.engine.masterVol);
+    this.kills = { hi: false, mid: false, low: false };
+    this._eqv = { hi: 0.5, mid: 0.5, low: 0.5 };
     this.pflGain = ctx.createGain(); this.pflGain.gain.value = 0;
     this.preFader.connect(this.pflGain).connect(this.engine.cueDest);
     this.meter = ctx.createAnalyser(); this.meter.fftSize = 1024;
@@ -315,9 +321,25 @@ export class Deck {
   // ---- mixer params (0..1) ----
   setGain(v) { this.trim.gain.value = 0.25 + v * 2; }
   setEq(kind, v) {
-    const db = v < 0.5 ? -(0.5 - v) * 2 * 34 : (v - 0.5) * 2 * 10;
+    this._eqv[kind] = v;
+    this._applyEq(kind);
+  }
+  _applyEq(kind) {
+    const v = this._eqv[kind];
+    const db = this.kills[kind] ? -40 : v < 0.5 ? -(0.5 - v) * 2 * 34 : (v - 0.5) * 2 * 10;
     const node = kind === "low" ? this.lo : kind === "mid" ? this.mid : this.hi;
     node.gain.value = db;
+  }
+  killEq(kind, on) {
+    this.kills[kind] = on;
+    this._applyEq(kind);
+  }
+  setPan(v) {
+    this.pan.pan.setTargetAtTime(clamp(v, -1, 1), this.engine.ctx.currentTime, 0.01);
+  }
+  setMixerFx(type) {
+    this.mixFx.setType(type || null);
+    this.mixFx.setEnabled(!!type && this.mixFx.enabled);
   }
   /** Mixer FLTR knob: CCW = lowpass sweep, CW = highpass sweep, center = bypass. */
   setFilter(v) {
