@@ -32,6 +32,7 @@ export class MidiHub {
     this.learn = false;
     this.input = null;
     this.output = null;
+    this._sent = new Map();
   }
 
   async init() {
@@ -119,6 +120,14 @@ export class MidiHub {
       return;
     }
     let e = this.idx.get(`${st},${d1}`);
+    if (window.__ptrace && (st & 0xf0) !== 0xf0) window.__ptrace.push({ L: "M", inc: "rx", src: `${st},${d1},${d2}`, t: performance.now() });
+    const ek = `${st},${d1},${d2 > 0 ? 1 : 0}`;
+    const ets = this._sent.get(ek);
+    if (ets !== undefined && performance.now() - ets < 200) {
+      this._sent.delete(ek);
+      if (window.__ptrace) window.__ptrace.push({ L: "M", inc: "echo", src: ek, t: performance.now() });
+      return;
+    }
     let noteOffAlias = false;
     if (!e && type === 0x80) {
       e = this.idx.get(`${st + 0x10},${d1}`); // 0x8n note-off for a 0x9n mapping
@@ -161,6 +170,9 @@ export class MidiHub {
     const key = act === "beatloop" ? `${deck}:beatloop:${index}` : `${deck}:${act}`;
     const e = this.ledIdx.get(key);
     if (!e) return;
-    try { this.output.send([(e.s & 0xf0), e.d, on ? 0x7f : 0x00]); } catch { /* closed port */ }
+    try {
+      this.output.send([e.s, e.d, on ? 0x7f : 0x00]);
+      this._sent.set(`${e.s},${e.d},${on ? 1 : 0}`, performance.now());
+    } catch { /* closed port */ }
   }
 }

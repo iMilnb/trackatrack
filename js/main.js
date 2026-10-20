@@ -127,13 +127,7 @@ function buildDeck(i, letter, slotSel) {
   q(".tempo").appendChild(tf.el);
 
   q(".play").addEventListener("click", (e) => {
-    const now = performance.now();
-    if (window.__ptrace) window.__ptrace.push({ L: letter, inc: "click", src: "d" + e.detail, t: now });
-    if (deck._lastClick && now - deck._lastClick < 300) {
-      if (window.__ptrace) window.__ptrace.push({ L: letter, inc: "skip", t: now });
-      return;
-    }
-    deck._lastClick = now;
+    if (window.__ptrace) window.__ptrace.push({ L: letter, inc: "click", src: "d" + e.detail, t: performance.now() });
     deck.toggle();
   });
   q(".cue").addEventListener("pointerdown", () => deck.pressCue(true));
@@ -699,6 +693,7 @@ function doSync(deck) {
 // ---- MIDI ----
 const ledCache = {};
 const hub = new MidiHub(handleMidi, null);
+window.__hub = hub;
 initMonitor(hub);
 hub.onStatus = (s) => {
   // Connection indicator: blue = all controllers connected, orange = some, unlit = none

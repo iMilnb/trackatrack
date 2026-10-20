@@ -99,6 +99,11 @@ def main():
 
         cmd("Page.enable")
         cmd("Runtime.enable")
+        try:
+            origin = URL.split("//", 1)[0] + "//" + URL.split("//", 1)[1].split("/", 1)[0]
+            cmd("Browser.grantPermissions", {"origin": origin, "permissions": ["midi", "midiSysex"]})
+        except Exception:
+            pass
         cmd("Page.navigate", {"url": URL})
         for _ in range(60):
             r = cmd("Runtime.evaluate", {"expression": "document.readyState"})
