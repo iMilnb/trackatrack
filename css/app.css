@@ -92,7 +92,7 @@ select {
 
 /* ================= Decks area ================= */
 #decks {
-  display: grid; grid-template-columns: 1fr 210px 1fr; gap: 4px;
+  display: grid; grid-template-columns: 1fr 240px 1fr; gap: 4px;
   padding: 4px; min-height: 0; overflow: hidden;
 }
 .deckslot { min-width: 0; display: flex; }
@@ -115,13 +115,13 @@ select {
 .d-times { display: flex; flex-direction: column; align-items: flex-end; }
 .d-remain { font-family: monospace; font-size: 15px; color: #d8dae0; }
 .d-dur { font-family: monospace; font-size: 10px; color: var(--dim); }
-.d-tempos { display: flex; flex-direction: column; align-items: flex-end; }
+.d-tempos { display: flex; align-items: baseline; gap: 5px; white-space: nowrap; }
 .d-bpm { font-family: monospace; font-size: 15px; color: #ececf1; }
 .t-pct { font-family: monospace; font-size: 10px; color: var(--green); }
 .d-trackbpm { font-family: monospace; font-size: 10px; color: var(--dim); }
 .d-key { align-self: center; font-size: 11px; font-weight: 700; color: #666; min-width: 26px; text-align: center; }
 .d-letter { align-self: flex-start; font-size: 22px; font-weight: 800; color: #c9cdd4; }
-#deckslotA .d-letter { color: var(--orange); }
+#deckslotA .d-letter { color: var(--orange); order: -1; }
 
 .d-row1 { grid-column: 1; display: flex; align-items: center; gap: 4px; }
 .d-row1 .btn.sync, .d-row1 .btn.master { min-width: 62px; height: 24px; }
@@ -175,7 +175,7 @@ select {
   border-radius: 6px; padding: 6px 6px 8px; min-height: 0;
 }
 #strips { display: flex; justify-content: center; gap: 8px; flex: 1; min-height: 0; }
-.strip { width: 92px; display: flex; flex-direction: column; align-items: center; gap: 4px; }
+.strip { width: 104px; display: flex; flex-direction: column; align-items: center; gap: 4px; }
 .s-letter { font-weight: 700; color: #ececf1; font-size: 13px; }
 #deckslotA ~ #mixer .strip:first-child .s-letter, .strip.lA .s-letter { color: var(--orange); }
 .s-knobs { display: flex; flex-direction: column; gap: 2px; align-items: center; }
@@ -186,16 +186,16 @@ select {
 .s-meter { width: 9px; height: 118px; background: #0c0d0f; border-radius: 2px; }
 .s-vol { height: 118px; display: flex; align-items: center; }
 .s-key { font-size: 10px; font-weight: 700; color: #666; height: 14px; }
-#xfrow { display: flex; align-items: center; gap: 6px; padding: 0 6px; }
+#xfrow { display: flex; flex-wrap: wrap; align-items: center; gap: 4px 6px; padding: 0 6px; }
 .xf-lab { font-size: 10px; color: var(--dim); font-weight: 700; }
-#xfader { flex: 1; }
+#xfader { flex: 1 1 70px; min-width: 70px; }
 #cueKnob { flex: none; }
 
 /* ================= Knobs / faders ================= */
 .knobwrap { display: flex; flex-direction: column; align-items: center; gap: 1px; }
 .knob-label { font-size: 8px; color: var(--dim); letter-spacing: 0.5px; white-space: nowrap; }
 .knob {
-  position: relative; width: 30px; height: 30px; border-radius: 50%;
+  position: relative; width: var(--ks, 30px); height: var(--ks, 30px); border-radius: 50%;
   background: radial-gradient(circle at 50% 32%, #34343e, #17171c 72%);
   border: 1px solid #3a3a44; cursor: ns-resize; flex: none;
 }
@@ -312,7 +312,7 @@ textarea {
 .lr-prog i { display: block; height: 100%; width: 0%; background: #d7a13c; }
 #lrLen, #arTakes { font-size: 10px; color: #cfd2d8; }
 #lrDW, #arGainK { display: inline-flex; }
-#lrDW .knob, #arGainK .knob { transform: scale(.8); transform-origin: center; }
+#lrDW .knob, #arGainK .knob { --ks: 24px; }
 .ar-meter { width: 110px; height: 10px; background: #17181b; border: 1px solid #3a3d42; border-radius: 2px; }
 #arDisp { font-size: 13px; color: #e6e8ec; letter-spacing: 1px; }
 .ar-dl { color: #6fb3e8; font-size: 10px; text-decoration: none; }
@@ -351,10 +351,10 @@ body.maxb #library { flex: 1 1 auto; }
 .strip.focused .s-letter { color: #14100a; background: #e08a2e; }
 .deckmod.d-compact .deck-main { display: none; }
 .deckmod.d-compact .deck-ov { flex: 1 1 auto; }
-.s-keyrow { display: flex; align-items: center; gap: 4px; padding-top: 2px; }
-.s-lock { font-size: 8px; padding: 3px 4px; color: #8b8d93; }
+.s-keyrow { display: flex; align-items: center; justify-content: space-between; gap: 2px; padding-top: 2px; width: 100%; }
+.s-lock { font-size: 8px; padding: 2px 3px; color: #8b8d93; }
 .s-lock.on { color: #0d0e10; background: #5aa7e0; border-color: #5aa7e0; }
-.s-keyk .knob { transform: scale(.7); transform-origin: top left; }
+.s-keyk .knob, .s-pank .knob { --ks: 26px; }
 #deckslotA .deckmod.focused .d-letter, #deckslotB .deckmod.focused .d-letter { color: #14100a !important; background: #e08a2e; }
 
 /* ============ WP4: FX unit modes ============ */
@@ -377,12 +377,13 @@ body.maxb #library { flex: 1 1 auto; }
 .u-play.on { color: #0d140d; background: #4fd74f; border-color: #4fd74f; font-weight: 700; }
 .u-viz { width: 100%; height: 16px; background: #17181b; border: 1px solid #2a2c31; border-radius: 2px; }
 .u-pknobs { display: flex; gap: 2px; justify-content: space-between; }
-.u-pknobs .knob { transform: scale(.78); transform-origin: top left; }
+.u-pknobs .knob { --ks: 24px; }
 
 /* WP4 fix: global section flex (hidden panels removed cleanly) */
 #globalsec { display: flex; align-items: stretch; }
 #globalsec .fxunit { flex: 1 1 0; min-width: 0; }
-#mctrl { flex: none; width: 320px; }
+#mctrl { flex: none; width: 350px; }
+.mc-sub .mc-b { min-width: 0; }
 .sel-col { flex: none; }
 .fxunit { display: flex; flex-wrap: wrap; align-content: center; align-items: center; row-gap: 5px; }
 .u-top { flex: 1 1 100%; }
@@ -390,20 +391,18 @@ body.maxb #library { flex: 1 1 auto; }
 .u-pat { flex: 1; min-width: 0; }
 
 /* ============ WP5: mixer channel additions ============ */
-.s-kills { display: flex; gap: 6px; justify-content: center; padding-top: 2px; }
-.s-kills .btn.k { font-size: 7px; padding: 2px 5px; color: #7d7f85; }
-.s-kills .btn.k:nth-child(1) { margin-left: 34px; }
+.s-kills { display: flex; gap: 3px; justify-content: center; padding-top: 2px; width: 100%; }
+.s-kills .btn.k { font-size: 8px; padding: 2px 4px; color: #7d7f85; }
 .s-kills .btn.k.on { color: #0d0e10; background: #d05c5c; border-color: #d05c5c; font-weight: 700; }
-.s-mixfx { display: flex; align-items: center; gap: 3px; padding-top: 3px; }
+.s-mixfx { display: flex; align-items: center; gap: 3px; padding-top: 3px; width: 100%; }
 .s-mxsel { flex: 1; min-width: 0; background: #0d0e10; color: var(--text); border: 1px solid #3a3d42; border-radius: 3px; font-size: 8px; padding: 2px; }
 .s-mixfx .btn.s-mxon { font-size: 8px; padding: 3px 4px; color: #8b8d93; }
 .s-mixfx .btn.s-mxon.on { background: #e0b04f; border-color: #e0b04f; color: #171204; font-weight: 700; }
-.s-mxk .knob { transform: scale(.62); transform-origin: top left; }
-.s-pank .knob { transform: scale(.68); transform-origin: top left; }
+.s-mxk .knob { --ks: 22px; }
 .xfb { font-size: 8px; padding: 3px 5px; color: #8b8d93; }
 .xfb.err { color: #e05c5c; border-color: #7a3030; }
 .xfb.on, #auxBtn.on { color: #0d0e10; background: #4fd74f; border-color: #4fd74f; }
-#auxKnob .knob { transform: scale(.8); transform-origin: top left; }
+#auxKnob .knob { --ks: 24px; }
 
 /* ============ WP6: browser tree favorites, preview, status bar ============ */
 #tblwrap { flex: 1; }
@@ -418,5 +417,5 @@ body.maxb #library { flex: 1 1 auto; }
 .pvprog { width: 90px; height: 6px; background: #17181b; border: 1px solid #3a3d42; border-radius: 2px; overflow: hidden; }
 .pvprog i { display: block; height: 100%; width: 0; background: #555a63; }
 .pvprog i.on { background: #4fd74f; }
-#pvVol .knob { transform: scale(.6); transform-origin: top left; }
+#pvVol .knob { --ks: 20px; }
 #pvPlay.on { color: #4fd74f; }
