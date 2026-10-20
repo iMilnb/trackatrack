@@ -5,11 +5,13 @@ import { getJSONOrNull } from "../server-api.js";
 const PAIRED = new Set(["tempo", "vol", "gain", "hi", "mid", "low", "deckfilter", "crossfader", "xfCurve"]);
 /** Actions whose on-screen UI should follow incoming MIDI values. */
 export const UI_SYNCED = PAIRED;
-const LED_ACTS = ["play", "cue", "sync", "shift", "quantize", "reverse", "loopIn", "loopOut", "autoLoop"];
+const LED_ACTS = ["play", "cue", "sync", "shift", "quantize", "reverse", "loopIn", "loopOut", "autoLoop", "slip", "hotcue", "keylock"];
+/** Actions carried as 14-bit MSB+LSB pairs beyond PAIRED (FX knobs on ch 5/6). */
+const PAIR_LIKE = (a) => PAIRED.has(a) || /^u[12]\.dw$/.test(a) || /^u[12]\.s[123]\.(mix|p1|p2)$/.test(a);
 export const BEATLOOP_SIZES = [0.5, 1, 2, 4, 8, 16, 32, 64];
 
 export const ACTION_NAMES = [
-  "play", "cue", "sync", "shift", "load", "reverse", "quantize", "keylock", "slip", "vinyl",
+  "play", "cue", "sync", "shift", "load", "reverse", "quantize", "keylock", "slip", "vinyl", "hotcue", "deckfilter", "faderstart",
   "loopIn", "loopOut", "loopExit", "loopHalve", "loopDouble", "autoLoop", "beatloop",
   "tempo", "vol", "gain", "hi", "mid", "low", "filter", "needle", "jogTick", "crossfader",
   ...[1, 2].flatMap((u) => [
@@ -74,7 +76,7 @@ export class MidiHub {
       const ent = { s, d, a: e.a, deck: e.deck, i: e.i | 0, f: e.f | 0 };
       this.idx.set(`${s},${d}`, ent);
       if (ent.f) return;
-      const ledKey = ent.a === "beatloop" ? `${ent.deck}:beatloop:${ent.i}` : `${ent.deck}:${ent.a}`;
+      const ledKey = (ent.a === "beatloop" || ent.a === "hotcue") ? `${ent.deck}:${ent.a}:${ent.i}` : `${ent.deck}:${ent.a}`;
       if (LED_ACTS.includes(ent.a) || ent.a === "beatloop") {
         if (!this.ledIdx.has(ledKey)) this.ledIdx.set(ledKey, ent);
       }
@@ -141,7 +143,7 @@ export class MidiHub {
       const msb = this._msb.get(`${e.deck}:${base}`) || 0;
       ctx.value = (msb | d2) / 16383;
       this.onAction(base, ctx);
-    } else if (PAIRED.has(e.a)) {
+    } else if (PAIR_LIKE(e.a)) {
       this._msb.set(`${e.deck}:${e.a}`, d2 << 7);
       ctx.value = d2 / 127;
       this.onAction(e.a, ctx); // coarse value now; refined when LSB arrives
@@ -167,7 +169,7 @@ export class MidiHub {
 
   setLED(deck, act, on, index = 0) {
     if (!this.output) return;
-    const key = act === "beatloop" ? `${deck}:beatloop:${index}` : `${deck}:${act}`;
+    const key = (act === "beatloop" || act === "hotcue") ? `${deck}:${act}:${index}` : `${deck}:${act}`;
     const e = this.ledIdx.get(key);
     if (!e) return;
     try {

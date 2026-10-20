@@ -205,10 +205,11 @@ function buildStrip(i, letter) {
     pfl.classList.toggle("on", deck.pfl);
   });
   const lock = q(".s-lock");
-  lock.addEventListener("click", () => {
+  const toggleLock = () => {
     deck.keyLock = !deck.keyLock;
     lock.classList.toggle("on", deck.keyLock);
-  });
+  };
+  lock.addEventListener("click", toggleLock);
   const keyk = makeKnob({ label: "KEY", value: 0.5, onInput: (v) => deck.setTranspose((v - 0.5) * 12) });
   q(".s-keyk").appendChild(keyk.el);
   const panK = makeKnob({ label: "PAN", value: 0.5, onInput: (v) => deck.setPan((v - 0.5) * 2) });
@@ -236,7 +237,7 @@ function buildStrip(i, letter) {
     deck.mixFx.setEnabled(!deck.mixFx.enabled);
     mxOn.classList.toggle("on", deck.mixFx.enabled);
   });
-  mixer.strips[i] = { el, deck, knobs, vol, meter, pfl, sfx1, sfx2, keyEl: q(".s-key"), lastKey: "" };
+  mixer.strips[i] = { el, deck, knobs, vol, meter, pfl, sfx1, sfx2, toggleLock, keyEl: q(".s-key"), lastKey: "" };
 }
 
 // ---- FX units (global section) ----
@@ -751,13 +752,17 @@ function handleMidi(a, c) {
     case "loopDouble": if (c.pressed !== false) d.loopDouble(); break;
     case "autoLoop": if (c.pressed !== false) d.loopSetBeats(4); break;
     case "beatloop": { if (c.pressed !== false) { const n = BEATLOOP_SIZES[c.index]; if (n) d.loopSetBeats(n); } } break;
+    case "hotcue": if (c.pressed) d.hotcuePress(c.index); else d.hotcueRelease(c.index); break;
+    case "slip": if (c.pressed !== false) d.flx = !d.flx; break;
+    case "faderstart": if (c.pressed !== false && !d.playing && d.durSec) d.play(); break;
+    case "keylock": if (c.pressed !== false) mixer.strips[d.idx].toggleLock(); break;
     case "tempo": d.setTempoPct((c.value - 0.5) * 0.16); d.els.tFader.set((c.value - 0.5) * 0.08); break;
     case "vol": mixer.vol[d.idx] = c.value; mixer.strips[d.idx].vol.set(c.value); applyMixer(); break;
     case "gain": d.setGain(c.value); mixer.strips[d.idx].knobs.gain.set(c.value); break;
     case "hi": d.setEq("hi", c.value); mixer.strips[d.idx].knobs.hi.set(c.value); break;
     case "mid": d.setEq("mid", c.value); mixer.strips[d.idx].knobs.mid.set(c.value); break;
     case "low": d.setEq("low", c.value); mixer.strips[d.idx].knobs.low.set(c.value); break;
-    case "filter": d.setFilter(c.value); mixer.strips[d.idx].knobs.fltr.set(c.value); break;
+    case "deckfilter": case "filter": d.setFilter(c.value); mixer.strips[d.idx].knobs.fltr.set(c.value); break;
     case "needle": if (d.durSec) d.seekSec(c.value * d.durSec); break;
     case "crossfader": mixer.xf = c.value; if (mixer.xfFader) mixer.xfFader.set(c.value); applyMixer(); break;
     case "jogTick": {
@@ -784,7 +789,12 @@ function ledSync() {
     setLed(i, "sync", deck.synced);
     setLed(i, "reverse", deck.reversed);
     for (let p = 0; p < 8; p++) setLed(i, "beatloop", deck.loop.on && deck.loop.beats === BEATLOOP_SIZES[p], p);
+    for (let p = 0; p < 8; p++) setLed(i, "hotcue", deck.hc[p] != null, p);
+    setLed(i, "slip", deck.flx);
+    setLed(i, "keylock", deck.keyLock);
   }
+  for (const [n, u] of fxUIs.entries())
+    u.slots.forEach((s, k) => setLed(-1, `u${n + 1}.s${k + 1}.on`, !!s.chain.type && s.chain.enabled));
   setLed(0, "quantize", engine.quantize > 0);
 }
 
