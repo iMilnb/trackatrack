@@ -92,7 +92,7 @@ select {
 
 /* ================= Decks area ================= */
 #decks {
-  display: grid; grid-template-columns: 1fr 248px 1fr auto; grid-template-rows: minmax(0, 1fr); gap: 4px;
+  display: grid; grid-template-columns: 1fr 248px 1fr; grid-template-rows: minmax(0, 1fr); gap: 4px;
   padding: 4px; min-height: 0; overflow: hidden;
 }
 .deckslot { min-width: 326px; display: flex; }
@@ -215,13 +215,6 @@ select {
 #xfader .hfader::-webkit-slider-thumb { -webkit-appearance: none; width: 13px; height: 24px; border-radius: 2px; margin-top: -10.5px; background: linear-gradient(#c9ccd4, #7d8089 45%, #f2f3f6 50%, #7d8089); border: 1px solid #05060a; }
 /* Crossfader assign letters (only A/B exist in this 2-deck app) */
 .xass { font-size: 9px; font-weight: 700; color: #5aa7e0; min-width: 9px; text-align: center; }
-/* Headphone Cue + AUX strip (deck B footer end — reference) */
-#hpc { display: flex; align-items: center; gap: 3px; align-self: end; justify-self: end; margin: 0 0 7px 2px; }
-#hpc .knob-label { display: none; }
-.hp-lab { font-size: 8px; color: var(--dim); font-weight: 700; }
-.hp-ico { font-size: 11px; color: #9aa0aa; margin: 0 3px; }
-#cueKnob .knob, #auxKnob .knob { --ks: 22px; }
-#cueVolKnob.hp-big .knob { --ks: 28px; border-color: #5aa7e0; box-shadow: 0 0 5px #5aa7e040; }
 
 /* ================= Knobs / faders ================= */
 .knobwrap { display: flex; flex-direction: column; align-items: center; gap: 1px; }
@@ -425,8 +418,7 @@ body.maxb #library { flex: 1 1 auto; }
 .s-mxselrow { padding-top: 2px; }
 .xfb { font-size: 8px; padding: 3px 5px; color: #8b8d93; }
 .xfb.err { color: #e05c5c; border-color: #7a3030; }
-.xfb.on, #auxBtn.on { color: #0d0e10; background: #4fd74f; border-color: #4fd74f; }
-#auxBtn { margin-left: 2px; }
+.xfb.on { color: #0d0e10; background: #4fd74f; border-color: #4fd74f; }
 
 /* ============ WP6: browser tree favorites, preview, status bar ============ */
 #tblwrap { flex: 1; }
