@@ -147,6 +147,21 @@ export class Deck {
       } catch (e) { err = e; }
     }
     if (!buf) {
+      // Chrome's MP3 parser is strict (corrupt frames -> EncodingError); ask the server to ffmpeg-decode
+      try {
+        const wurl = "/decode/" + track.path.split("/").map(encodeURIComponent).join("/");
+        const resp = await fetch(wurl);
+        if (!resp.ok) throw new Error("corrupt/unplayable file (server: " + resp.status + ")");
+        const wab = await resp.arrayBuffer();
+        if (this.track !== track) return; // superseded
+        buf = await Promise.race([
+          this.engine.ctx.decodeAudioData(wab),
+          new Promise((_, rej) => setTimeout(() => rej(new Error("timeout 20s")), 20000)),
+        ]);
+        err = null;
+      } catch (e) { err = e; }
+    }
+    if (!buf) {
       this.errMsg = err ? `${err.name === "Error" ? "" : err.name + ": "}${err.message || err}` : "unknown";
       console.error(`[deck ${this.letter}] decode failed:`, this.errMsg);
       if (this.track === track) { this.state = "error"; this._paintStatic(); }
@@ -443,7 +458,7 @@ export class Deck {
     }
     e.state.textContent =
       this.state === "loading" ? "FETCHING…" : this.state === "decoding" ? "DECODING…"
-        : this.state === "analyzing" ? "ANALYZING…" : this.state === "error" ? `DECODE ERROR: ${(this.errMsg || "?").slice(0, 26)}` : "";
+        : this.state === "analyzing" ? "ANALYZING…" : this.state === "error" ? `DECODE ERROR: ${(this.errMsg || "?").slice(0, 44)}` : "";
   }
 }
 

@@ -151,6 +151,8 @@ class Handler(SimpleHTTPRequestHandler):
             return self.send_json(get_tracks(force="force" in self.path))
         if path.startswith("/audio/"):
             return self.send_audio(path[len("/audio/"):])
+        if path.startswith("/decode/"):
+            return self.send_decode(path[len("/decode/"):])
         if path.startswith("/api/"):
             return self.send_error(404, "no such api")
         return super().do_GET()
@@ -181,6 +183,32 @@ class Handler(SimpleHTTPRequestHandler):
             self.wfile.write(body)
         except BrokenPipeError:
             pass
+
+    def send_decode(self, rel):
+        """Server-side ffmpeg decode to WAV (fallback for files Chrome's strict parser rejects)."""
+        music = os.path.realpath(CFG["music_dir"])
+        full = os.path.realpath(os.path.join(music, rel))
+        if not full.startswith(music + os.sep) and full != music:
+            return self.send_error(403, "outside music dir")
+        if not os.path.isfile(full):
+            return self.send_error(404, "not found")
+        import subprocess
+        try:
+            p = subprocess.run(
+                ["ffmpeg", "-v", "error", "-nostdin", "-i", full,
+                 "-acodec", "pcm_s16le", "-f", "wav", "-"],
+                capture_output=True, timeout=120)
+        except FileNotFoundError:
+            return self.send_error(500, "ffmpeg not installed")
+        except subprocess.TimeoutExpired:
+            return self.send_error(500, "ffmpeg timeout")
+        if p.returncode != 0 or not p.stdout:
+            return self.send_error(422, "ffmpeg: " + p.stderr.decode(errors="replace")[:200])
+        self.send_response(200)
+        self.send_header("Content-Type", "audio/wav")
+        self.send_header("Content-Length", str(len(p.stdout)))
+        self.end_headers()
+        self.wfile.write(p.stdout)
 
     def send_audio(self, rel):
         music = os.path.realpath(CFG["music_dir"])
