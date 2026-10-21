@@ -206,7 +206,7 @@ select {
 .s-vol .vfader { height: 100%; }
 .s-key { writing-mode: vertical-rl; align-self: center; font-size: 10px; font-weight: 700; color: #666; }
 .s-pank { display: none; } /* PAN only with Advanced panels open (doc) */
-#xfrow { display: flex; align-items: center; gap: 4px; padding: 0 2px; }
+#xfrow { display: flex; align-items: center; gap: 6px; padding: 0 4px; }
 .xf-lab { font-size: 10px; color: var(--dim); font-weight: 700; }
 #xfader { flex: 1; min-width: 70px; height: 26px; display: flex; align-items: center; }
 /* Thin track + tall rectangular cap, reference style */
@@ -416,9 +416,6 @@ body.maxb #library { flex: 1 1 auto; }
 
 .s-kills .btn.k.on { color: #0d0e10; background: #d05c5c; border-color: #d05c5c; font-weight: 700; }
 .s-mxselrow { padding-top: 2px; }
-.xfb { font-size: 8px; padding: 3px 5px; color: #8b8d93; }
-.xfb.err { color: #e05c5c; border-color: #7a3030; }
-.xfb.on { color: #0d0e10; background: #4fd74f; border-color: #4fd74f; }
 
 /* ============ WP6: browser tree favorites, preview, status bar ============ */
 #tblwrap { flex: 1; }

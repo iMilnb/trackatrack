@@ -927,25 +927,6 @@ function frame() {
     wireMasterControl();
     wireGlobalPanels();
 
-    // Crossfader: fade left/right + auto fade (doc: Crossfade Controls)
-    const xfGlide = (target, ms) => {
-      if (xfGlide._raf) cancelAnimationFrame(xfGlide._raf);
-      const s = mixer.xf, t0 = performance.now();
-      const stepFn = () => {
-        const k = Math.min(1, (performance.now() - t0) / ms);
-        mixer.xf = s + (target - s) * k;
-        mixer.xfFader.set(mixer.xf);
-        applyMixer();
-        xfGlide._raf = k < 1 ? requestAnimationFrame(stepFn) : null;
-      };
-      stepFn();
-    };
-    $("#xfLeft").addEventListener("click", () => xfGlide(clamp(mixer.xf - 0.25, 0, 1), 180));
-    $("#xfRight").addEventListener("click", () => xfGlide(clamp(mixer.xf + 0.25, 0, 1), 180));
-    $("#xfAutoL").addEventListener("click", () => xfGlide(0, 700));
-    $("#xfAutoR").addEventListener("click", () => xfGlide(1, 700));
-    // Fade buttons live in the crossfader row (reference): «« « [A|xfader|B] » »» — decks stay identical
-
     try {
       const devs = await Promise.race([
         engine.listOutputs(),
