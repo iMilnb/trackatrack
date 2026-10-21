@@ -959,8 +959,9 @@ function frame() {
       const m = pick("#masterOut", "sink.master"), c = pick("#cueOut", "sink.cue");
       // 4-channel outputs (DDJ-SR: ch1/2=master, ch3/4=phones) need the cue stream
       // parked on the rear pair, otherwise PipeWire lands it on the main speakers.
-      const maxCh = { "": (devs.find((d) => d.deviceId === "default") || {}).maxChannelCount || 2 };
-      for (const d of devs) maxCh[d.deviceId] = d.maxChannelCount || 2;
+      const chOf = (d) => (d && d.maxChannelCount >= 4) || /pioneer|ddj/i.test(d && d.label || "") ? 4 : 2;
+      const maxCh = { "": chOf(devs.find((d) => d.deviceId === "default")) };
+      for (const d of devs) maxCh[d.deviceId] = chOf(d);
       if (m) engine.setMasterSink(m);
       engine.setCueSink(c, maxCh[c] || 2);
       $("#masterOut").addEventListener("change", (e) => { engine.setMasterSink(e.target.value); localStorage.setItem("sink.master", e.target.value); });

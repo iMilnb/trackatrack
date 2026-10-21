@@ -114,6 +114,13 @@ export class Engine {
     const rear = maxCh >= 4;
     if (this.cueCtx && this._cueRear !== rear) this._buildCueCtx(rear);
     try { if (this.cueCtx.setSinkId) await this.cueCtx.setSinkId(id); } catch (e) { console.warn("cue sink", e); }
+    // DeviceInfo.maxChannelCount is unreliable on Linux (often 2/undefined);
+    // destination.maxChannelCount reflects the ACTUAL output sink after setSinkId.
+    const live = this.cueCtx.destination.maxChannelCount || 0;
+    if (live > 0 && (live >= 4) !== this._cueRear) {
+      this._buildCueCtx(live >= 4);
+      try { if (this.cueCtx.setSinkId) await this.cueCtx.setSinkId(id); } catch (e) { console.warn("cue sink 2", e); }
+    }
     this.cueCtx.resume().catch(() => {});
   }
 
