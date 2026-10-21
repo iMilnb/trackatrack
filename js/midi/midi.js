@@ -5,7 +5,7 @@ import { getJSONOrNull } from "../server-api.js";
 const PAIRED = new Set(["tempo", "vol", "gain", "hi", "mid", "low", "deckfilter", "crossfader", "xfCurve"]);
 /** Actions whose on-screen UI should follow incoming MIDI values. */
 export const UI_SYNCED = PAIRED;
-const LED_ACTS = ["play", "cue", "sync", "shift", "quantize", "reverse", "loopIn", "loopOut", "autoLoop", "slip", "hotcue", "keylock"];
+const LED_ACTS = ["play", "cue", "sync", "shift", "quantize", "reverse", "loopIn", "loopOut", "autoLoop", "slip", "hotcue", "keylock", "pfl", "vinyl"];
 /** Actions carried as 14-bit MSB+LSB pairs beyond PAIRED (FX knobs on ch 5/6). */
 const PAIR_LIKE = (a) => PAIRED.has(a) || /^u[12]\.dw$/.test(a) || /^u[12]\.s[123]\.(mix|p1|p2)$/.test(a);
 export const BEATLOOP_SIZES = [0.5, 1, 2, 4, 8, 16, 32, 64];
@@ -13,7 +13,7 @@ export const BEATLOOP_SIZES = [0.5, 1, 2, 4, 8, 16, 32, 64];
 export const ACTION_NAMES = [
   "play", "cue", "sync", "shift", "load", "reverse", "quantize", "keylock", "slip", "vinyl", "hotcue", "deckfilter", "faderstart",
   "loopIn", "loopOut", "loopExit", "loopHalve", "loopDouble", "autoLoop", "beatloop",
-  "tempo", "vol", "gain", "hi", "mid", "low", "filter", "needle", "jogTick", "crossfader",
+  "tempo", "vol", "gain", "hi", "mid", "low", "filter", "needle", "jogTick", "jogRing", "jogTouch", "pfl", "crossfader",
   ...[1, 2].flatMap((u) => [
     `u${u}.dw`, `u${u}.rst`,
     ...[1, 2, 3].flatMap((s) => [`u${u}.s${s}.on`, `u${u}.s${s}.type`, `u${u}.s${s}.mix`, `u${u}.s${s}.p1`, `u${u}.s${s}.p2`]),
@@ -137,7 +137,7 @@ export class MidiHub {
     }
     this.onRaw({ st, d1, d2, e });
     if (!e) return;
-    const ctx = { deck: e.deck, value: null, pressed: null, index: e.i, shift: !!e.f };
+    const ctx = { deck: e.deck, value: null, pressed: null, index: e.i, shift: !!e.f, raw: d2 };
     if (e.a.endsWith("@lsb")) {
       const base = e.a.slice(0, -4);
       const msb = this._msb.get(`${e.deck}:${base}`) || 0;

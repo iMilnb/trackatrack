@@ -760,6 +760,9 @@ function handleMidi(a, c) {
     case "slip": if (c.pressed !== false) d.flx = !d.flx; break;
     case "faderstart": if (c.pressed !== false && !d.playing && d.durSec) d.play(); break;
     case "keylock": if (c.pressed !== false) mixer.strips[d.idx].toggleLock(); break;
+    case "pfl": if (c.pressed !== false) { d.setPfl(!d.pfl); const s = mixer.strips[d.idx]; if (s) s.pfl.classList.toggle("on", d.pfl); } break;
+    case "vinyl": if (c.pressed !== false) d.vinyl = !d.vinyl; break;
+    case "jogTouch": if (c.pressed) d.scratchStart(); else d.scratchEnd(); break;
     case "tempo": d.setTempoPct((c.value - 0.5) * 0.16); d.els.tFader.set((c.value - 0.5) * 0.08); break;
     case "vol": mixer.vol[d.idx] = c.value; mixer.strips[d.idx].vol.set(c.value); applyMixer(); break;
     case "gain": d.setGain(c.value); mixer.strips[d.idx].knobs.gain.set(c.value); break;
@@ -769,9 +772,11 @@ function handleMidi(a, c) {
     case "deckfilter": case "filter": d.setFilter(c.value); mixer.strips[d.idx].knobs.fltr.set(c.value); break;
     case "needle": if (d.durSec) d.seekSec(c.value * d.durSec); break;
     case "crossfader": mixer.xf = c.value; if (mixer.xfFader) mixer.xfFader.set(c.value); applyMixer(); break;
-    case "jogTick": {
-      const dv = c.value > 64 ? c.value - 128 : c.value;
-      d.bendStart(dv >= 0 ? 0.5 : -0.5);
+    case "jogRing": case "jogTick": {
+      const dv = c.raw - 64; // Pioneer relative tick: 64 centered, 65..127 = +1..63, 63..1 = -1..-63
+      if (!dv) break;
+      if (a === "jogTick" && d._scrub) { d.scratchTick(dv); break; }
+      d.bendStart(dv > 0 ? 0.5 : -0.5);
       clearTimeout(d._bT);
       d._bT = setTimeout(() => d.bendEnd(), 130);
       break;
@@ -796,6 +801,9 @@ function ledSync() {
     for (let p = 0; p < 8; p++) setLed(i, "hotcue", deck.hc[p] != null, p);
     setLed(i, "slip", deck.flx);
     setLed(i, "keylock", deck.keyLock);
+    setLed(i, "pfl", deck.pfl);
+    setLed(i, "vinyl", deck.vinyl);
+    if (mixer.strips[i]) mixer.strips[i].pfl.classList.toggle("on", !!deck.pfl);
   }
   for (const [n, u] of fxUIs.entries())
     u.slots.forEach((s, k) => setLed(-1, `u${n + 1}.s${k + 1}.on`, !!s.chain.type && s.chain.enabled));

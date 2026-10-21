@@ -41,6 +41,9 @@ export class Deck {
     this.loop = { on: false, start: 0, end: 0, beats: 0 };
     this.zoomBeats = 32;
     this.pfl = false;
+    this.vinyl = false;
+    this.scratchAmt = null; // signed platter speed while scratching; null = motor
+    this._scrub = null;
     this.route = null; // FxUnit index when FX1/FX2 assigned on the mixer strip
     this._onLoaded = null;
     els.letter.textContent = letter;
@@ -90,7 +93,7 @@ export class Deck {
   }
 
   // ---- transport ----
-  get rateVal() { return this.tempo * (1 + this.bendAmt); }
+  get rateVal() { return this.scratchAmt != null ? this.scratchAmt : this.tempo * (1 + this.bendAmt); }
   get pos() { return this._pos; }
   get posSec() {
     let p = this._pos;
@@ -104,7 +107,8 @@ export class Deck {
   _setPlayParam(p) { this.p.play.setValueAtTime(p ? 1 : 0, this.engine.ctx.currentTime); }
   _setRateParam() {
     const rt = this.rateVal * Math.pow(2, this.transpose / 12);
-    this.p.rate.setValueAtTime(this.reversed ? -rt : rt, this.engine.ctx.currentTime);
+    const v = this.scratchAmt != null ? rt : (this.reversed ? -rt : rt);
+    this.p.rate.setValueAtTime(v, this.engine.ctx.currentTime);
   }
 
   async load(track, { autoplay = false } = {}) {
@@ -220,6 +224,36 @@ export class Deck {
   }
   bendStart(dir) { this.bendAmt = clamp(dir, -1, 1) * 0.08; this._setRateParam(); }
   bendEnd() { this.bendAmt = 0; this._setRateParam(); }
+
+  // ---- platter scratch (jog top touched: ticks drive platter speed, Traktor-style) ----
+  scratchStart() {
+    if (!this.durSec) return;
+    clearTimeout(this._scrubT);
+    this._scrub = { last: performance.now(), wasPlaying: this.playing };
+    this.scratchAmt = 0;
+    this.playing = true;
+    this._setPlayParam(true);
+    this._setRateParam();
+  }
+  scratchTick(dv) {
+    if (!this._scrub) return;
+    const now = performance.now();
+    const dt = Math.max(6, now - this._scrub.last);
+    this._scrub.last = now;
+    this.scratchAmt = clamp(dv * 10 / dt, -8, 8); // ~K tick*ms/ms per 1x; stop-decay below
+    this._setRateParam();
+    clearTimeout(this._scrubT);
+    this._scrubT = setTimeout(() => { if (this._scrub) { this.scratchAmt = 0; this._setRateParam(); } }, 90);
+  }
+  scratchEnd() {
+    if (!this._scrub) return;
+    clearTimeout(this._scrubT);
+    const wasPlaying = this._scrub.wasPlaying;
+    this._scrub = null;
+    this.scratchAmt = null;
+    if (wasPlaying) this._setRateParam();
+    else this.pause("scratch");
+  }
 
   // ---- cue / cue+play / reverse ----
   pressCue(pressed) {
