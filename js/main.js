@@ -42,7 +42,10 @@ function applyMixer() {
 // ---- FX unit routing (channel inserts) ----
 function applyFxRouting() {
   for (const { deck } of decks) if (deck.fxIn) deck.fxIn.disconnect();
-  for (const u of engine.units) { u.in.disconnect(); u.out.disconnect(); }
+  // NOTE: do NOT u.in.disconnect() — it is a blanket OUTPUT disconnect and would
+  // kill the unit's internal in->duckNode fanout (fx.js). Incoming fxIn links are
+  // already cleared by deck.fxIn.disconnect() above.
+  for (const u of engine.units) u.out.disconnect();
   for (const { deck } of decks) {
     if (deck.route != null) {
       const u = engine.units[deck.route];
