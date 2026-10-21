@@ -944,10 +944,7 @@ function frame() {
     $("#xfRight").addEventListener("click", () => xfGlide(clamp(mixer.xf + 0.25, 0, 1), 180));
     $("#xfAutoL").addEventListener("click", () => xfGlide(0, 700));
     $("#xfAutoR").addEventListener("click", () => xfGlide(1, 700));
-    // Reference layout: fade buttons flank the mixer at deck-footer level
-    const mv = (id) => { const e = $(id); e.hidden = false; return e; };
-    $("#deckslotA .deck-t")?.append(mv("#xfAutoL"), mv("#xfLeft"));
-    $("#deckslotB .deck-t")?.prepend(mv("#xfRight"), mv("#xfAutoR"));
+    // Fade buttons live in the crossfader row (reference): «« « [A|xfader|B] » »» — decks stay identical
 
     try {
       const devs = await Promise.race([

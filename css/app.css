@@ -206,7 +206,7 @@ select {
 .s-vol .vfader { height: 100%; }
 .s-key { writing-mode: vertical-rl; align-self: center; font-size: 10px; font-weight: 700; color: #666; }
 .s-pank { display: none; } /* PAN only with Advanced panels open (doc) */
-#xfrow { display: flex; align-items: center; gap: 6px; padding: 0 4px; }
+#xfrow { display: flex; align-items: center; gap: 4px; padding: 0 2px; }
 .xf-lab { font-size: 10px; color: var(--dim); font-weight: 700; }
 #xfader { flex: 1; min-width: 70px; height: 26px; display: flex; align-items: center; }
 /* Thin track + tall rectangular cap, reference style */
