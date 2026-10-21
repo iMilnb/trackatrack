@@ -92,10 +92,10 @@ select {
 
 /* ================= Decks area ================= */
 #decks {
-  display: grid; grid-template-columns: 1fr 248px 1fr; grid-template-rows: minmax(0, 1fr); gap: 4px;
+  display: grid; grid-template-columns: 1fr 248px 1fr auto; grid-template-rows: minmax(0, 1fr); gap: 4px;
   padding: 4px; min-height: 0; overflow: hidden;
 }
-.deckslot { min-width: 0; display: flex; }
+.deckslot { min-width: 326px; display: flex; }
 .deckmod {
   display: grid; grid-template-columns: 1fr 70px;
   grid-template-rows: auto auto 1fr auto auto;
@@ -216,7 +216,7 @@ select {
 /* Crossfader assign letters (only A/B exist in this 2-deck app) */
 .xass { font-size: 9px; font-weight: 700; color: #5aa7e0; min-width: 9px; text-align: center; }
 /* Headphone Cue + AUX strip (deck B footer end — reference) */
-#hpc { display: flex; align-items: center; gap: 3px; align-self: flex-end; margin: 0 2px 7px 6px; flex: none; }
+#hpc { display: flex; align-items: center; gap: 3px; align-self: end; justify-self: end; margin: 0 0 7px 2px; }
 #hpc .knob-label { display: none; }
 .hp-lab { font-size: 8px; color: var(--dim); font-weight: 700; }
 .hp-ico { font-size: 11px; color: #9aa0aa; margin: 0 3px; }

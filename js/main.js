@@ -951,7 +951,7 @@ function frame() {
     const mv = (id) => { const e = $(id); e.hidden = false; return e; };
     $("#deckslotA .deck-t")?.append(mv("#xfAutoL"), mv("#xfLeft"));
     $("#deckslotB .deck-t")?.prepend(mv("#xfRight"), mv("#xfAutoR"));
-    $("#deckslotB")?.append($("#hpc"));
+    $("#decks")?.append($("#hpc"));
 
     // AUX control: external input (microphone) into the master mix
     let auxGain = null, auxOn = true, auxVal = 0.7;
