@@ -957,10 +957,14 @@ function frame() {
         return sel.value;
       };
       const m = pick("#masterOut", "sink.master"), c = pick("#cueOut", "sink.cue");
+      // 4-channel outputs (DDJ-SR: ch1/2=master, ch3/4=phones) need the cue stream
+      // parked on the rear pair, otherwise PipeWire lands it on the main speakers.
+      const maxCh = { "": (devs.find((d) => d.deviceId === "default") || {}).maxChannelCount || 2 };
+      for (const d of devs) maxCh[d.deviceId] = d.maxChannelCount || 2;
       if (m) engine.setMasterSink(m);
-      if (c) engine.setCueSink(c);
+      engine.setCueSink(c, maxCh[c] || 2);
       $("#masterOut").addEventListener("change", (e) => { engine.setMasterSink(e.target.value); localStorage.setItem("sink.master", e.target.value); });
-      $("#cueOut").addEventListener("change", (e) => { engine.setCueSink(e.target.value); localStorage.setItem("sink.cue", e.target.value); });
+      $("#cueOut").addEventListener("change", (e) => { engine.setCueSink(e.target.value, maxCh[e.target.value] || 2); localStorage.setItem("sink.cue", e.target.value); });
     } catch (e) { console.warn("device enum failed", e); }
 
     $("#monBtn").addEventListener("click", () => initMonitor.toggle && initMonitor.toggle());

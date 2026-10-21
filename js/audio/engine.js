@@ -25,16 +25,15 @@ export class Engine {
 
     // cue bus: master-context MediaStream -> cue context (own output device)
     this.cueDest = ctx.createMediaStreamDestination();
-    this.cueCtx = new AudioContext();
-    this.cueSrc = this.cueCtx.createMediaStreamSource(this.cueDest.stream);
-    this.cueGain = this.cueCtx.createGain();
-    this.cueGain.gain.value = 0.7;
-    this.cueSrc.connect(this.cueGain).connect(this.cueCtx.destination);
     // MIX knob semantics: headphones = MIX*cue + (1-MIX)*master  (VOL = cueGain)
     this.cueSend = ctx.createGain();
     this.cueSend.connect(this.cueDest);
     this.cueMixGain = ctx.createGain();
     this.masterAnalyser.connect(this.cueMixGain).connect(this.cueDest);
+    this._cueLevel = 0.7;
+    this._cueMix = null;
+    this.cueGain = null;
+    this._buildCueCtx(false);
 
     this.masterDeck = 0;
     this.quantize = 4; // beats; 0 = off
@@ -55,14 +54,49 @@ export class Engine {
     this.loopBus.connect(this.masterVol);
   }
 
+  // DDJ-SR family USB soundcards are 4ch: ch1/2 = master out, ch3/4 = phones jack.
+  // With a 4ch sink, PipeWire maps a plain stereo stream to FL/FR = master out, so
+  // the cue mix would land on the speakers. rear=true parks cue in the RL/RR pair.
+  _buildCueCtx(rear) {
+    if (this.cueCtx) { this.cueCtx.close().catch(() => {}); this.cueCtx = null; }
+    try {
+      this.cueCtx = rear
+        ? new AudioContext({ latencyHint: "interactive", channelCount: 4 })
+        : new AudioContext({ latencyHint: "interactive" });
+      this._cueRear = rear;
+    } catch {
+      this.cueCtx = new AudioContext({ latencyHint: "interactive" });
+      this._cueRear = false;
+    }
+    this.cueSrc = this.cueCtx.createMediaStreamSource(this.cueDest.stream);
+    this.cueGain = this.cueCtx.createGain();
+    this.cueGain.gain.value = this._cueLevel * this._cueLevel * 1.6;
+    if (this._cueRear) {
+      const sp = this.cueCtx.createChannelSplitter(2);
+      const mg = this.cueCtx.createChannelMerger(4);
+      this.cueSrc.connect(this.cueGain).connect(sp);
+      sp.connect(mg, 0, 2); // L -> RL (ch3 = phones L)
+      sp.connect(mg, 1, 3); // R -> RR (ch4 = phones R)
+      mg.connect(this.cueCtx.destination);
+    } else {
+      this.cueSrc.connect(this.cueGain).connect(this.cueCtx.destination);
+    }
+    if (this._cueMix != null) this.setCueMix(this._cueMix);
+    this.cueCtx.resume().catch(() => {});
+  }
+
   resume() {
     this.ctx.resume().catch(() => {});
     this.cueCtx.resume().catch(() => {});
   }
 
   setMasterVolume(v) { this.masterVol.gain.value = v * v * 1.4; }
-  setCueLevel(v) { this.cueGain.gain.value = v * v * 1.6; }
-  setCueMix(v) { this.cueSend.gain.value = v; this.cueMixGain.gain.value = 1 - v; }
+  setCueLevel(v) { this._cueLevel = v; this.cueGain.gain.value = v * v * 1.6; }
+  setCueMix(v) {
+    this._cueMix = v;
+    this.cueSend.gain.value = v;
+    this.cueMixGain.gain.value = 1 - v;
+  }
 
   setLimiter(on) {
     this.limiterOn = on;
@@ -76,8 +110,11 @@ export class Engine {
   async setMasterSink(id) {
     try { if (this.ctx.setSinkId) await this.ctx.setSinkId(id); } catch (e) { console.warn("master sink", e); }
   }
-  async setCueSink(id) {
+  async setCueSink(id, maxCh = 2) {
+    const rear = maxCh >= 4;
+    if (this.cueCtx && this._cueRear !== rear) this._buildCueCtx(rear);
     try { if (this.cueCtx.setSinkId) await this.cueCtx.setSinkId(id); } catch (e) { console.warn("cue sink", e); }
+    this.cueCtx.resume().catch(() => {});
   }
 
   async listOutputs() {
