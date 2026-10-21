@@ -16,7 +16,7 @@ body {
   color: var(--text);
   font-family: "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
   display: grid;
-  grid-template-rows: 34px 106px minmax(300px, 1fr) minmax(220px, 30vh);
+  grid-template-rows: 34px 106px minmax(410px, 1fr) minmax(200px, 30vh);
   overflow: auto;
   font-size: 12px;
 }
@@ -92,7 +92,7 @@ select {
 
 /* ================= Decks area ================= */
 #decks {
-  display: grid; grid-template-columns: 1fr 240px 1fr; gap: 4px;
+  display: grid; grid-template-columns: 1fr 240px 1fr; grid-template-rows: minmax(0, 1fr); gap: 4px;
   padding: 4px; min-height: 0; overflow: hidden;
 }
 .deckslot { min-width: 0; display: flex; }
@@ -200,7 +200,7 @@ select {
 /* Channel fader: thin track + tick ladder + flat cap (reference style) */
 .s-vol { display: flex; align-items: stretch; height: auto; position: relative; width: 30px; }
 .s-vol::before { content: ""; position: absolute; left: 1px; top: 2px; bottom: 2px; width: 3px; background: repeating-linear-gradient(to bottom, #3a3d44 0 1px, transparent 1px 10%); }
-#strips .vfader { appearance: none; -webkit-appearance: none; width: 24px; background: transparent; }
+#strips .vfader { appearance: none; -webkit-appearance: none; width: 24px; background: transparent; margin: 0; }
 #strips .vfader::-webkit-slider-runnable-track { width: 3px; border-radius: 2px; background: #4a4d55; }
 #strips .vfader::-webkit-slider-thumb { -webkit-appearance: none; appearance: none; width: 22px; height: 7px; border-radius: 2px; background: linear-gradient(#e6e8ee, #9a9dab); border: 1px solid #22242a; margin-left: -10px; }
 .s-vol .vfader { height: 100%; }
