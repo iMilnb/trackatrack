@@ -921,9 +921,9 @@ function frame() {
     applyMixer();
     masterMeter = makeMeter($("#masterMeter"), false);
 
-    const cueKnob = makeKnob({ label: "CUE MIX", value: 0.85, bipolar: false, onInput: (v) => engine.setCueMix(v) });
+    const cueKnob = makeKnob({ label: "", value: 0.85, bipolar: false, onInput: (v) => engine.setCueMix(v) });
     $("#cueKnob").appendChild(cueKnob.el);
-    const cueVol = makeKnob({ label: "CUE VOL", value: 0.7, bipolar: false, onInput: (v) => engine.setCueLevel(v) });
+    const cueVol = makeKnob({ label: "", value: 0.7, bipolar: false, onInput: (v) => engine.setCueLevel(v) });
     $("#cueVolKnob").appendChild(cueVol.el);
     engine.setCueMix(0.85);
     engine.setCueLevel(0.7);
@@ -947,10 +947,15 @@ function frame() {
     $("#xfRight").addEventListener("click", () => xfGlide(clamp(mixer.xf + 0.25, 0, 1), 180));
     $("#xfAutoL").addEventListener("click", () => xfGlide(0, 700));
     $("#xfAutoR").addEventListener("click", () => xfGlide(1, 700));
+    // Reference layout: fade buttons flank the mixer at deck-footer level; headphone strip at deck B footer end
+    const mv = (id) => { const e = $(id); e.hidden = false; return e; };
+    $("#deckslotA .deck-t")?.append(mv("#xfAutoL"), mv("#xfLeft"));
+    $("#deckslotB .deck-t")?.prepend(mv("#xfRight"), mv("#xfAutoR"));
+    $("#deckslotB .deck-t")?.append($("#hpc"));
 
     // AUX control: external input (microphone) into the master mix
     let auxGain = null, auxOn = true, auxVal = 0.7;
-    const auxKnob = makeKnob({ label: "AUX", value: 0.7, bipolar: false, onInput: (v) => { auxVal = v; if (auxGain) auxGain.gain.value = auxOn ? v : 0; } });
+    const auxKnob = makeKnob({ label: "", value: 0.7, bipolar: false, onInput: (v) => { auxVal = v; if (auxGain) auxGain.gain.value = auxOn ? v : 0; } });
     $("#auxKnob").appendChild(auxKnob.el);
     $("#auxBtn").addEventListener("click", async (e) => {
       const b = e.currentTarget;

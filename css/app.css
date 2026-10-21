@@ -206,11 +206,24 @@ select {
 .s-vol .vfader { height: 100%; }
 .s-key { writing-mode: vertical-rl; align-self: center; font-size: 10px; font-weight: 700; color: #666; }
 .s-pank { display: none; } /* PAN only with Advanced panels open (doc) */
-#xfrow { display: flex; align-items: center; gap: 6px; padding: 0 6px; }
+#xfrow { display: flex; align-items: center; gap: 6px; padding: 0 4px; }
 .xf-lab { font-size: 10px; color: var(--dim); font-weight: 700; }
-#xfader { flex: 1; min-width: 70px; }
-/* Headphone Cue + AUX row — bottom of the Mixer, per doc (3)(4)(5) */
-#hprow { display: flex; align-items: flex-end; gap: 6px; padding: 0 6px; }
+#xfader { flex: 1; min-width: 70px; height: 26px; display: flex; align-items: center; }
+/* Thin track + tall rectangular cap, reference style */
+#xfader .hfader { appearance: none; -webkit-appearance: none; background: transparent; height: 26px; }
+#xfader .hfader::-webkit-slider-runnable-track { height: 3px; background: #050608; border-radius: 2px; }
+#xfader .hfader::-webkit-slider-thumb { -webkit-appearance: none; width: 13px; height: 24px; border-radius: 2px; margin-top: -10.5px; background: linear-gradient(#c9ccd4, #7d8089 45%, #f2f3f6 50%, #7d8089); border: 1px solid #05060a; }
+/* Crossfader assign letters (2x2 stack, active pair blue — reference) */
+.xass { display: grid; grid-template-columns: auto auto; column-gap: 5px; font-size: 8px; font-weight: 700; color: #565961; line-height: 1.3; }
+.xass i { font-style: normal; }
+.xass .on { color: #5aa7e0; }
+/* Headphone Cue + AUX strip (deck B footer end — reference) */
+#hpc { display: flex; align-items: center; gap: 3px; margin-left: auto; padding-left: 10px; }
+#hpc .knob-label { display: none; }
+.hp-lab { font-size: 8px; color: var(--dim); font-weight: 700; }
+.hp-ico { font-size: 11px; color: #9aa0aa; margin: 0 3px; }
+#cueKnob .knob, #auxKnob .knob { --ks: 22px; }
+#cueVolKnob.hp-big .knob { --ks: 28px; border-color: #5aa7e0; box-shadow: 0 0 5px #5aa7e040; }
 
 /* ================= Knobs / faders ================= */
 .knobwrap { display: flex; flex-direction: column; align-items: center; gap: 1px; }
@@ -415,7 +428,7 @@ body.maxb #library { flex: 1 1 auto; }
 .xfb { font-size: 8px; padding: 3px 5px; color: #8b8d93; }
 .xfb.err { color: #e05c5c; border-color: #7a3030; }
 .xfb.on, #auxBtn.on { color: #0d0e10; background: #4fd74f; border-color: #4fd74f; }
-#auxKnob .knob, #cueKnob .knob, #cueVolKnob .knob { --ks: 24px; }
+#auxBtn { margin-left: 2px; }
 
 /* ============ WP6: browser tree favorites, preview, status bar ============ */
 #tblwrap { flex: 1; }
