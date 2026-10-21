@@ -947,11 +947,11 @@ function frame() {
     $("#xfRight").addEventListener("click", () => xfGlide(clamp(mixer.xf + 0.25, 0, 1), 180));
     $("#xfAutoL").addEventListener("click", () => xfGlide(0, 700));
     $("#xfAutoR").addEventListener("click", () => xfGlide(1, 700));
-    // Reference layout: fade buttons flank the mixer at deck-footer level; headphone strip at deck B footer end
+    // Reference layout: fade buttons flank the mixer at deck-footer level; headphone strip at window right edge (footer band)
     const mv = (id) => { const e = $(id); e.hidden = false; return e; };
     $("#deckslotA .deck-t")?.append(mv("#xfAutoL"), mv("#xfLeft"));
     $("#deckslotB .deck-t")?.prepend(mv("#xfRight"), mv("#xfAutoR"));
-    $("#deckslotB .deck-t")?.append($("#hpc"));
+    $("#deckslotB")?.append($("#hpc"));
 
     // AUX control: external input (microphone) into the master mix
     let auxGain = null, auxOn = true, auxVal = 0.7;

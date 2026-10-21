@@ -92,7 +92,7 @@ select {
 
 /* ================= Decks area ================= */
 #decks {
-  display: grid; grid-template-columns: 1fr 240px 1fr; grid-template-rows: minmax(0, 1fr); gap: 4px;
+  display: grid; grid-template-columns: 1fr 248px 1fr; grid-template-rows: minmax(0, 1fr); gap: 4px;
   padding: 4px; min-height: 0; overflow: hidden;
 }
 .deckslot { min-width: 0; display: flex; }
@@ -174,7 +174,7 @@ select {
   background: var(--panel); border: 1px solid var(--border);
   border-radius: 6px; padding: 6px 6px 8px; min-height: 0;
 }
-#strips { display: flex; justify-content: center; gap: 6px; flex: 1; min-height: 0; overflow-y: auto; }
+#strips { display: flex; justify-content: center; gap: 6px; flex: 1; min-height: 0; overflow: clip; }
 .strip { width: 108px; display: flex; flex-direction: column; align-items: center; height: 100%; min-height: 0; }
 .s-letter { font-weight: 700; color: #ececf1; font-size: 13px; }
 #deckslotA ~ #mixer .strip:first-child .s-letter, .strip.lA .s-letter { color: var(--orange); }
@@ -216,7 +216,7 @@ select {
 /* Crossfader assign letters (only A/B exist in this 2-deck app) */
 .xass { font-size: 9px; font-weight: 700; color: #5aa7e0; min-width: 9px; text-align: center; }
 /* Headphone Cue + AUX strip (deck B footer end — reference) */
-#hpc { display: flex; align-items: center; gap: 3px; margin-left: auto; padding-left: 10px; }
+#hpc { display: flex; align-items: center; gap: 3px; align-self: flex-end; margin: 0 2px 7px 6px; flex: none; }
 #hpc .knob-label { display: none; }
 .hp-lab { font-size: 8px; color: var(--dim); font-weight: 700; }
 .hp-ico { font-size: 11px; color: #9aa0aa; margin: 0 3px; }
