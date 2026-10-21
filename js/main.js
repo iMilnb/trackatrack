@@ -14,7 +14,9 @@ import { parseKey, camelotColor, clamp } from "./util.js";
 const $ = (s) => document.querySelector(s);
 
 const engine = new Engine();
+window.__engine = engine; // debug handle
 const decks = [];
+window.__decks = decks;
 let focused = 0;
 
 const mixer = {
@@ -937,10 +939,20 @@ function frame() {
       ]);
       const opts = '<option value="">System default</option>' +
         devs.map((d, i) => `<option value="${d.deviceId}">${d.label || "output " + (i + 1)}</option>`).join("");
-      $("#masterOut").innerHTML = opts;
-      $("#cueOut").innerHTML = opts;
-      $("#masterOut").addEventListener("change", (e) => engine.setMasterSink(e.target.value));
-      $("#cueOut").addEventListener("change", (e) => engine.setCueSink(e.target.value));
+      const pick = (id, key) => {
+        const sel = $(id);
+        sel.innerHTML = opts;
+        const saved = localStorage.getItem(key);
+        const ddj = devs.find((d) => /ddj|pioneer/i.test(d.label || ""));
+        const want = saved !== null ? saved : (ddj ? ddj.deviceId : "");
+        if (want && devs.some((d) => d.deviceId === want)) sel.value = want;
+        return sel.value;
+      };
+      const m = pick("#masterOut", "sink.master"), c = pick("#cueOut", "sink.cue");
+      if (m) engine.setMasterSink(m);
+      if (c) engine.setCueSink(c);
+      $("#masterOut").addEventListener("change", (e) => { engine.setMasterSink(e.target.value); localStorage.setItem("sink.master", e.target.value); });
+      $("#cueOut").addEventListener("change", (e) => { engine.setCueSink(e.target.value); localStorage.setItem("sink.cue", e.target.value); });
     } catch (e) { console.warn("device enum failed", e); }
 
     $("#monBtn").addEventListener("click", () => initMonitor.toggle && initMonitor.toggle());
