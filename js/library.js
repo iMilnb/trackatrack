@@ -49,20 +49,6 @@ export class Library {
       <div id="libtabs">
         <button class="libtab sel" data-tab="collection">Track Collection</button>
         <button class="libtab" data-tab="history">History</button>
-        <button id="fltBtn" class="btn sm flttab" title="Filter pane — narrow tracks by genre, artist, key, BPM">FILTER</button>
-      </div>
-      <div id="fltbar" hidden>
-        <div class="fcol"><div class="fh">Genre</div><div class="flist" id="fGenre"></div></div>
-        <div class="fcol"><div class="fh">Artist</div><div class="flist" id="fArtist"></div></div>
-        <div class="fcol"><div class="fh">Key</div><div class="flist" id="fKey"></div></div>
-        <div class="fcol fbpm"><div class="fh">BPM</div>
-          <div class="frow"><input id="fLo" type="number" placeholder="min" min="40" max="300"><span>–</span><input id="fHi" type="number" placeholder="max" min="40" max="300"></div>
-        </div>
-        <div class="fcol fmid">
-          <label class="fhide" title="Off: non-matching tracks stay listed but dimmed"><input id="fHide" type="checkbox" checked> Hide Tracks</label>
-          <button id="fReset" class="btn sm" title="Clear genre/artist/key/BPM filters">Reset</button>
-        </div>
-        <span id="fCount" class="fcount"></span>
       </div>
       <div id="libbody">
         <div id="tree"></div>
@@ -84,7 +70,6 @@ export class Library {
       </div>`;
     this.treeEl = this.root.querySelector("#tree");
     this._bindTree();
-    this._bindFilter();
     this.tbody = this.root.querySelector("#libtable tbody");
     this.root.querySelectorAll(".libtab").forEach((b) => b.addEventListener("click", () => {
       this.tab = b.dataset.tab;
@@ -269,13 +254,6 @@ export class Library {
     } else {
       this.root.querySelector("#libcount").textContent = `${ts.length} tracks`;
     }
-    if (this.filt.open) {
-      this._drawFilter(base);
-      const fc = this.root.querySelector("#fCount");
-      fc.textContent = anyF && !this.filt.hide
-        ? `${base.filter((t) => this._fmatch(t)).length}/${base.length} match`
-        : anyF ? `${ts.length} match` : `${base.length} tracks`;
-    }
   }
 
   fActive() {
@@ -299,64 +277,6 @@ export class Library {
       if (hi !== null && t.bpm > hi) return false;
     }
     return true;
-  }
-
-  _facet(el, vals, sel) {
-    el.innerHTML = [`<div class="fitem${sel ? "" : " sel"}" data-v="">All</div>`]
-      .concat(vals.map(([v, n]) =>
-        `<div class="fitem${sel === v ? " sel" : ""}" data-v="${esc(v)}">${esc(v)} <i>${n}</i></div>`))
-      .join("");
-  }
-
-  _drawFilter(base) {
-    const tally = (fn) => {
-      const m = new Map();
-      for (const t of base) { const v = fn(t); if (v) m.set(v, (m.get(v) || 0) + 1); }
-      return [...m.entries()];
-    };
-    const g = tally((t) => t.genre || "").sort((x, y) => x[0].localeCompare(y[0]));
-    const a = tally((t) => t.artist || "").sort((x, y) => x[0].localeCompare(y[0]));
-    const kmap = new Map();
-    for (const t of base) {
-      const c = parseKey(t.key);
-      if (c) kmap.set(c.text, { n: (kmap.get(c.text)?.n || 0) + 1, c });
-    }
-    const k = [...kmap.entries()]
-      .map(([text, { n, c }]) => [text, n, c])
-      .sort((x, y) => (x[2].num - y[2].num) || ((x[2].minor ? 1 : 0) - (y[2].minor ? 1 : 0)))
-      .map(([text, n]) => [text, n]);
-    this._facet(this.root.querySelector("#fGenre"), g, this.filt.genre);
-    this._facet(this.root.querySelector("#fArtist"), a, this.filt.artist);
-    this._facet(this.root.querySelector("#fKey"), k, this.filt.key);
-  }
-
-  _bindFilter() {
-    const r = this.root;
-    const bar = r.querySelector("#fltbar");
-    r.querySelector("#fltBtn").addEventListener("click", () => {
-      this.filt.open = !this.filt.open;
-      bar.hidden = !this.filt.open;
-      r.querySelector("#fltBtn").classList.toggle("on", this.filt.open);
-      this.render();
-    });
-    const pick = (col) => (e) => {
-      const it = e.target.closest(".fitem");
-      if (!it) return;
-      this.filt[col] = it.dataset.v || null;
-      this.render();
-    };
-    r.querySelector("#fGenre").addEventListener("click", pick("genre"));
-    r.querySelector("#fArtist").addEventListener("click", pick("artist"));
-    r.querySelector("#fKey").addEventListener("click", pick("key"));
-    r.querySelector("#fLo").addEventListener("input", (e) => { this.filt.lo = e.target.value; this.render(); });
-    r.querySelector("#fHi").addEventListener("input", (e) => { this.filt.hi = e.target.value; this.render(); });
-    r.querySelector("#fHide").addEventListener("change", (e) => { this.filt.hide = e.target.checked; this.render(); });
-    r.querySelector("#fReset").addEventListener("click", () => {
-      Object.assign(this.filt, { genre: null, artist: null, key: null, lo: "", hi: "" });
-      r.querySelector("#fLo").value = "";
-      r.querySelector("#fHi").value = "";
-      this.render();
-    });
   }
 
   _select(id) {

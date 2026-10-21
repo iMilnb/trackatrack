@@ -16,7 +16,7 @@ body {
   color: var(--text);
   font-family: "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
   display: grid;
-  grid-template-rows: 34px 106px minmax(410px, 1fr) minmax(200px, 30vh);
+  grid-template-rows: 34px 106px minmax(410px, 3fr) minmax(240px, 4fr);
   overflow: auto;
   font-size: 12px;
 }
@@ -451,18 +451,4 @@ body.maxb #library { flex: 1 1 auto; }
 }
 
 /* ---- Filter pane ---- */
-#fltbar{display:flex;gap:10px;align-items:flex-start;padding:5px 8px;border-bottom:1px solid #333;background:#1b1b1e;font-size:10px}
-#fltbar .fcol{min-width:130px;max-width:200px;display:flex;flex-direction:column;gap:2px}
-#fltbar .fh{color:#888;font-size:9px;letter-spacing:1px;text-transform:uppercase}
-#fltbar .flist{max-height:130px;overflow-y:auto;border:1px solid #333;background:#141416;min-width:120px}
-#fltbar .fitem{padding:1px 6px;cursor:pointer;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;color:#bbb}
-#fltbar .fitem:hover{background:#26262b}
-#fltbar .fitem.sel{background:#3a6ea5;color:#fff}
-#fltbar .fitem i{color:#666;font-style:normal;float:right;margin-left:8px}
-#fltbar .frow{display:flex;align-items:center;gap:4px}
-#fltbar .fbpm input{width:52px;background:#141416;border:1px solid #333;color:#ddd;padding:2px 4px}
-#fltbar .fmid{min-width:auto;max-width:none;justify-content:space-between;gap:8px;align-self:stretch;padding-top:14px}
-#fltbar .fhide{color:#bbb;display:flex;gap:4px;align-items:center;white-space:nowrap;cursor:pointer}
-#fltbar .fcount{margin-left:auto;align-self:center;color:#888;white-space:nowrap}
-.flttab{margin-left:auto;align-self:center}
 #libtable .dim td{color:#555}
