@@ -968,16 +968,16 @@ function frame() {
           sel.value = want && ds.some((d) => d.deviceId === want) ? want : "";
         }
       };
-      const applySinks = () => {
+      const applyRouting = async () => {
         const m = $("#masterOut").value, c = $("#cueOut").value;
-        if (m) engine.setMasterSink(m);
-        engine.setCueSink(c, maxCh[c] || 2);
+        if (m) await engine.setMasterSink(m);
+        // same device in both selects -> one shared 4ch stream (main front, phones rear)
+        await engine.setCueSink(c, maxCh[c] || 2, m === c);
       };
       const devs = await raceEnum();
       populate(devs);
-      applySinks();
-      $("#masterOut").addEventListener("change", (e) => { engine.setMasterSink(e.target.value); setCookie("sink.master", e.target.value); });
-      $("#cueOut").addEventListener("change", (e) => { engine.setCueSink(e.target.value, maxCh[e.target.value] || 2); setCookie("sink.cue", e.target.value); });
+      applyRouting();
+      for (const [id, key] of SELS) $(id).addEventListener("change", (e) => { setCookie(key, e.target.value); applyRouting(); });
       // Chrome returns EMPTY labels (and per-page-load random deviceIds!) until mic
       // permission is granted — without that the DDJ-SR is unselectable and the saved
       // cookie can never match next session. Ask once, on the first click, then re-fill.
@@ -990,7 +990,7 @@ function frame() {
             const st = await navigator.mediaDevices.getUserMedia({ audio: true });
             st.getTracks().forEach((t) => t.stop());
             populate(await raceEnum());
-            applySinks();
+            applyRouting();
             $("#masterOut").title = "Main output device";
             $("#cueOut").title = "Headphone output device";
           } catch (e) { console.warn("device label unlock failed", e); }

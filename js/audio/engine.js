@@ -33,6 +33,19 @@ export class Engine {
     this._cueLevel = 0.7;
     this._cueMix = null;
     this.cueGain = null;
+    // Single-stream mode: when OUT and PHONES pick the SAME 4ch device (DDJ-SR case),
+    // both mixes travel as ONE 4ch stream through the master destination
+    // (ch1/2 = master out, ch3/4 = phones jack). Two independent AudioContext streams
+    // on the same PipeWire sink do NOT reliably get separate channel pairs — PipeWire
+    // lands both on FL/FR and the cue comes out of the speakers again.
+    this.cueSharedIn = ctx.createGain();
+    this.cueSend.connect(this.cueSharedIn);
+    this.cueMixGain.connect(this.cueSharedIn);
+    this.cueSharedLvl = ctx.createGain();
+    this.cueSharedLvl.gain.value = this._cueLevel * this._cueLevel * 1.6;
+    this.cueSharedIn.connect(this.cueSharedLvl);
+    this._shMerger = null;
+    this._shOn = false;
     this._buildCueCtx(false);
 
     this.masterDeck = 0;
@@ -87,11 +100,11 @@ export class Engine {
 
   resume() {
     this.ctx.resume().catch(() => {});
-    this.cueCtx.resume().catch(() => {});
+    if (!this._shOn) this.cueCtx.resume().catch(() => {});
   }
 
   setMasterVolume(v) { this.masterVol.gain.value = v * v * 1.4; }
-  setCueLevel(v) { this._cueLevel = v; this.cueGain.gain.value = v * v * 1.6; }
+  setCueLevel(v) { this._cueLevel = v; this.cueGain.gain.value = v * v * 1.6; if (this.cueSharedLvl) this.cueSharedLvl.gain.value = v * v * 1.6; }
   setCueMix(v) {
     this._cueMix = v;
     this.cueSend.gain.value = v;
@@ -110,7 +123,9 @@ export class Engine {
   async setMasterSink(id) {
     try { if (this.ctx.setSinkId) await this.ctx.setSinkId(id); } catch (e) { console.warn("master sink", e); }
   }
-  async setCueSink(id, maxCh = 2) {
+  async setCueSink(id, maxCh = 2, shared = false) {
+    if (shared && await this._sharedOn()) return;
+    this._sharedOff();
     const rear = maxCh >= 4;
     if (this.cueCtx && this._cueRear !== rear) this._buildCueCtx(rear);
     try { if (this.cueCtx.setSinkId) await this.cueCtx.setSinkId(id); } catch (e) { console.warn("cue sink", e); }
@@ -120,7 +135,36 @@ export class Engine {
     if (live > 0 && (live >= 4) !== this._cueRear) {
       this._buildCueCtx(live >= 4);
       try { if (this.cueCtx.setSinkId) await this.cueCtx.setSinkId(id); } catch (e) { console.warn("cue sink 2", e); }
+      if (this._cueRear) { const ok = await this._sharedOn(); if (ok) return; } // 4ch shared beats dual-stream rear park
     }
+    this.cueCtx.resume().catch(() => {});
+  }
+
+  // master+cue on one 4ch stream through the master destination: master on ch1/2,
+  // cue parked on ch3/4 (= DDJ-SR phones jack). Returns false if the sink can't do 4ch.
+  async _sharedOn() {
+    const dest = this.ctx.destination;
+    if (dest.maxChannelCount < 4) return false;
+    if (!this._shMerger) this._shMerger = this.ctx.createChannelMerger(4);
+    if (!this._shOn) {
+      this.masterAnalyser.disconnect(this.ctx.destination);
+      this.masterAnalyser.connect(this._shMerger, 0, 0); // master L/R -> ch1/2
+      this.cueSharedLvl.connect(this._shMerger, 0, 2); // cue L/R -> ch3/4
+      this._shMerger.connect(dest);
+      this._shOn = true;
+      console.log("cue routing: shared 4ch (phones on rear pair)");
+    }
+    try { dest.channelCountMode = "explicit"; dest.channelCount = 4; } catch (e) { console.warn("4ch out", e); }
+    this.cueCtx.suspend().catch(() => {}); // parallel cue stream must not double-play on ch1/2
+    return true;
+  }
+
+  _sharedOff() {
+    if (!this._shOn) return;
+    this._shMerger.disconnect(this.ctx.destination);
+    this.masterAnalyser.connect(this.ctx.destination);
+    try { this.ctx.destination.channelCount = 2; } catch (e) { console.warn("2ch out", e); }
+    this._shOn = false;
     this.cueCtx.resume().catch(() => {});
   }
 

@@ -92,11 +92,13 @@ python3 tools/shot.py http://127.0.0.1:8360 /tmp/x.png --w 1920 --h 1080 --wait 
   A blanket `unit.in.disconnect()` in `applyFxRouting` once silenced the entire app
   (units are permanently inserted between deck and channel fader at boot).
 - FxChain/FxUnit pass **dry** audio when FX is off — a "disabled" unit must still carry sound.
-- Cue/headphone bus = master ctx → `MediaStreamDestination` → separate cue AudioContext
-  (own output device). The DDJ-SR is a **4-channel** USB sound card over ALSA:
-  ch1/2 = MASTER OUT, ch3/4 = PHONES jack. A plain stereo stream lands on ch1/2, so when
-  the cue sink has ≥4 channels the cue ctx is built 4-channel and the mix parked on the
-  rear pair (splitter → merger inputs 2/3).
+- Cue/headphone bus: **if OUT and PHONES selects pick the same device** and it is 4-channel,
+  engine runs **single-stream mode** (`_sharedOn`): the master destination itself is set to
+  4ch and a ChannelMerger sends master → ch1/2 and cue → ch3/4 (DDJ-SR: ch1/2 = MASTER OUT,
+  ch3/4 = PHONES jack); the separate cue AudioContext stays suspended. Otherwise the cue
+  travels master ctx → `MediaStreamDestination` → cue AudioContext (own device), rear-parked
+  when its sink is ≥4ch. Two independent 2-stream routes on ONE PipeWire sink proved
+  unreliable (both land on FL/FR) — do not re-split the shared stream.
 - Chrome's `DeviceInfo.maxChannelCount` is unreliable on Linux — trust
   `cueCtx.destination.maxChannelCount` **after** `setSinkId`.
 - Sink selections persist in **cookies** (`sink.master`, `sink.cue`; top-bar OUT/PHONES
