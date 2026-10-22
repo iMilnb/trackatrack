@@ -1,0 +1,125 @@
+# trackatrack
+
+Browser DJ app: vanilla ES modules, **no build step, no npm, no framework**.
+`server.py` (Python stdlib only) serves the app + music library. The user drives a
+Pioneer **DDJ-SR** controller over Web MIDI and listens on its outputs (Linux +
+PipeWire host). Browsers on the LAN open https://<host>:8443 (self-signed cert).
+The UI imitates NI **Traktor Pro**.
+
+## Run
+
+```bash
+cd ~/www/trackatrack
+setsid nohup python3 server.py --port 8443 --ssl >> server-8443.out 2>&1 < /dev/null &
+setsid nohup python3 server.py --port 8360        >> server-8360.out 2>&1 < /dev/null &   # plain HTTP, used by test tooling
+```
+
+- Flags: `--music-dir` (default `~/Music`), `--port`, `--host`, `--rescan`, `--ssl`, `--san`.
+- `&`-backgrounding alone gets killed by tool-call timeouts — keep the `setsid nohup ... < /dev/null &` form.
+- After JS/CSS changes the user must **Ctrl+F5** (no build, no cache-busting).
+- server.py endpoints: `/api/library` (scan + ID3; cache `.library-cache-v2.json` — bump
+  the version whenever `read_tags` fields change or results go stale), `/audio/<rel>`,
+  `/decode/<rel>` (ffmpeg→WAV fallback for MP3s Chrome's strict decoder rejects), `/api/log`
+  (browser console relay → `client.log`).
+
+## Verify before committing (there is no test framework)
+
+Headless Google Chrome is driven over raw CDP by two stdlib scripts (they launch Chrome
+on debug ports 9333/9334 and grant MIDI):
+
+```bash
+# full e2e: loads a track on both decks, plays, asserts mPeak (real audio),
+# hotcue/loop/kill/mixer-FX/unit flows, empty window.__errs
+python3 tools/cdp_eval.py http://127.0.0.1:8360 "$(cat tools/reg.js)"
+
+# screenshot
+python3 tools/shot.py http://127.0.0.1:8360 /tmp/x.png --w 1920 --h 1080 --wait "document.querySelectorAll('#libtable tbody tr').length"
+```
+
+- A `playing` class is NOT proof of audio — assert `window.__engine.masterPeak() > 0`
+  (reg.js does, via `mPeak`). An analyzer tap per graph stage localizes dead segments.
+- Debug handles: `window.__engine`, `window.__decks` (array of `{deck, ...}` wrappers),
+  `window.__hub` (MidiHub; inject controller traffic with `__hub._msg(new Uint8Array([st,d1,d2]))`),
+  `window.__errs`.
+- No `node` on this host — syntax-check via the CDP probe or careful review.
+
+## Layout
+
+- `index.html`, `css/app.css` — single page, CSS grid; body rows and pane widths are
+  hand-tuned pixel values (faders use percentage heights — see `.deckslot`/`#decks`
+  comments before changing rows/columns).
+- `js/main.js` — boot, mixer state, the MIDI dispatch `switch` (`case "<action>"`),
+  `frame()` rAF loop (runs `ledSync()` every frame), strip/deck UI factories.
+- `js/audio/` — `engine.js` (master chain + cue bus + FX units), `deck.js` (Deck class:
+  transport, cue, loops, hotcues, scratch), `deck-processor.js` (AudioWorklet sample
+  reader), `fx.js` (FxChain / FxUnit / PatternPlayer), `rec.js`, `preview.js`.
+- `js/analysis/` — BPM/beatgrid worker. `js/library.js` — collection table (sort, search,
+  folder tree). `js/midi/` — see below. Also `ui.js`, `waveform.js`, `util.js`, `idb.js`,
+  `server-api.js`.
+- `tools/` — `cdp_eval.py`, `shot.py`, `reg.js` (e2e), `gen-mapping.py`.
+
+## UI design rules (owner requirements — non-negotiable)
+
+1. The UI must match the NI Traktor reference screenshot
+   (`docs.native-instruments.com/online-guides/traktor-pro-manual/en/image/uuid-08cd423b-c601-ec4d-ede9-d0818f953a47.jpg`).
+   Nothing in the UI that is not in that image; the image wins over prose in the manual;
+   never invent controls (an invented headphone-knob cluster and crossfader fade buttons
+   were explicitly rejected and removed).
+2. Deck A and Deck B must share a **byte-identical** layout (diff the two `.deck-t`
+   innerHTML when refactoring deck UI).
+3. Exactly two decks. Nothing below the crossfader. Library zone stays taller than the
+   deck row.
+
+## MIDI (js/midi/)
+
+- `mapping.js` is **auto-generated** from Mixxx's DDJ-SX definition via
+  `tools/gen-mapping.py` — do not hand-edit. SR-specific differences go in
+  `mapping-override.json` (loaded after, later wins; note/status values are hex strings).
+- DDJ-SR facts: SHIFT = `0x9n,0x3F`; channel CUE (headphone PFL) = `0x9n,0x54`;
+  SLIP `0x40`; KEYLOCK `0x1A`; fader-from-zero `0x9n,0x66`; FX units live on MIDI
+  channels 5/6 (`0x94`/`0x95`, knobs 14-bit MSB+LSB); SR has no pan/kill/fade-button
+  hardware and does not echo LED messages.
+- Pioneer relative jog ticks are **64-centered signed**: `dv = raw - 64` (65=+1, 63=-1).
+- Jog semantics: top platter touch → scratch (`Deck.scratchStart/scratchTick/scratchEnd`);
+  side ring (or untouched ticks) → pitch bend.
+- Adding an action: extend `ACTION_NAMES` (monitor/learn UI), add a `case` in main.js
+  dispatch; for a lightable button also add to `LED_ACTS` (midi.js) and `setLed(...)` in
+  `ledSync` (main.js).
+
+## Audio gotchas (hard-won — read before touching the graph)
+
+- Bare `node.disconnect()` severs **all outputs** of a node, including internal wiring.
+  A blanket `unit.in.disconnect()` in `applyFxRouting` once silenced the entire app
+  (units are permanently inserted between deck and channel fader at boot).
+- FxChain/FxUnit pass **dry** audio when FX is off — a "disabled" unit must still carry sound.
+- Cue/headphone bus = master ctx → `MediaStreamDestination` → separate cue AudioContext
+  (own output device). The DDJ-SR is a **4-channel** USB sound card over ALSA:
+  ch1/2 = MASTER OUT, ch3/4 = PHONES jack. A plain stereo stream lands on ch1/2, so when
+  the cue sink has ≥4 channels the cue ctx is built 4-channel and the mix parked on the
+  rear pair (splitter → merger inputs 2/3).
+- Chrome's `DeviceInfo.maxChannelCount` is unreliable on Linux — trust
+  `cueCtx.destination.maxChannelCount` **after** `setSinkId`.
+- Sink selections persist in localStorage (`sink.master`, `sink.cue`); device labels are
+  empty until mic permission is granted, so auto-pick can silently fall back to default.
+- Chrome auto-suspens a context that renders silence ~30 s (its PipeWire stream
+  disappears from `wpctl status` — expected, not a bug).
+- ~40 library files are physically dead (all-zero bytes): nested `Defected Acapellas
+  Vol 3 Classics/` folder + parts of `VA-For_Djs_Only_2007-03*`. Chrome also rejects some
+  corrupt MP3s that ffmpeg recovers → that's why `/decode/` exists.
+
+## Host/environment gotchas
+
+- PipeWire: diagnose routing with `wpctl status` / `pw-dump` (stream channels, port links,
+  which sink Chrome actually opened).
+- The user is remote-ish: bug reports are terse one-liners; verify headlessly yourself
+  first, then ask them to Ctrl+F5 and report.
+- `pkill -f "server.py"` from a command whose own cmdline matches kills your own shell.
+- `client.log` (browser console relay) churns constantly — keep it out of feature
+  commits; `cert.*`, `server-*.out`, caches are gitignored.
+
+## Workflow
+
+- One commit per verified change; message states what + why. **Do not push unless asked.**
+- `/tmp` is wiped on reboot — canonical e2e lives at `tools/reg.js`, not in `/tmp`.
+- Destructive or layout-visible changes: run the e2e + a screenshot before committing;
+  audio-path changes: additionally confirm `mPeak > 0`.
