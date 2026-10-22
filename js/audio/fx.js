@@ -143,7 +143,7 @@ export class FxChain {
   }
 }
 
-/** Traktor-style FX Unit: Single / Group / Pattern Player modes.
+/** DJ-software-style FX Unit: Single / Group / Pattern Player modes.
  *  Group mode: three FxChain slots in series + unit Dry/Wet crossfade.
  *  Pattern mode: synth 808 kit pattern player fed into the wet bus, sidechain duck on dry. */
 export const FX_BUTTONS = {

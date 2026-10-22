@@ -4,7 +4,7 @@ Browser DJ app: vanilla ES modules, **no build step, no npm, no framework**.
 `server.py` (Python stdlib only) serves the app + music library. The user drives a
 Pioneer **DDJ-SR** controller over Web MIDI and listens on its outputs (Linux +
 PipeWire host). Browsers on the LAN open https://<host>:8443 (self-signed cert).
-The UI imitates NI **Traktor Pro**.
+Popular desktop DJ software (2-deck view) inspired the UI.
 
 ## Run
 
@@ -62,7 +62,8 @@ python3 tools/shot.py http://127.0.0.1:8360 /tmp/x.png --w 1920 --h 1080 --wait 
 
 ## UI design rules (owner requirements — non-negotiable)
 
-1. The UI must match the NI Traktor reference screenshot
+1. The UI must match the reference screenshot of the popular DJ software it
+   resembles
    (`docs.native-instruments.com/online-guides/traktor-pro-manual/en/image/uuid-08cd423b-c601-ec4d-ede9-d0818f953a47.jpg`).
    Nothing in the UI that is not in that image; the image wins over prose in the manual;
    never invent controls (an invented headphone-knob cluster and crossfader fade buttons

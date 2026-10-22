@@ -1,7 +1,7 @@
 import { FxUnit } from "./fx.js";
 
 /** Master audio graph: deck outputs -> limiter -> meter -> output; separate cue bus for PFL.
- *  Two Traktor-style FX Units live at channel level: routed per mixer-channel assignment. */
+ *  Two DJ-software-style FX Units live at channel level: routed per mixer-channel assignment. */
 export class Engine {
   constructor() {
     this.ctx = new AudioContext({ latencyHint: "interactive" });

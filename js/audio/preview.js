@@ -1,5 +1,5 @@
 /** Browser Preview Player: plays the selected track via the main output
- *  (Traktor routes preview to the cue/headphone bus; in the browser we mix into master). */
+ *  (Desktop DJ software routes preview to the cue/headphone bus; in the browser we mix into master). */
 import { audioURL } from "../server-api.js";
 
 export class PreviewPlayer {

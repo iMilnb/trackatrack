@@ -8,7 +8,8 @@ the mixer.
 ![trackatrack with two decks loaded](docs/screenshot.png)
 
 > **Alpha.** Two decks, one controller (Pioneer DDJ-SR), Linux + PipeWire and
-> Chrome are the tested combination. The UI imitates NI Traktor Pro 2-deck view.
+> Chrome are the tested combination. The UI follows the classic 2-deck view of
+> popular desktop DJ software.
 
 ## Features
 
@@ -16,7 +17,7 @@ the mixer.
   beatgrid analysis in a Web Worker, key display, master tempo
 - **Performance controls** — CUE / PLAY / CUP / FLIP / REV, 8 hot cues, loop
   in/out, beat-loop ladders, slip, key-lock, pitch bend & platter scratch
-- **Traktor-style FX** — two global FX Units + per-channel mixer FX, pattern
+- **DJ-software-style FX** — two global FX Units + per-channel mixer FX, pattern
   player for lfo-style mods
 - **Mixer** — channel EQ/gain/fader, crossfader, master limiter, master meter
 - **Headphone cueing** — independent cue bus with MIX (cue↔master blend) and
@@ -95,7 +96,7 @@ The MON panel shows every incoming message; MIDI-learn lets you rebind.
 ```
 server.py          tiny HTTP server: app + /audio + ffmpeg /decode fallback + library API
 index.html         single page — grid layout, templates for deck/strip/fx units
-css/app.css        dark Traktor-style theme
+css/app.css        dark DJ-style theme
 js/main.js         boot, mixer, MIDI dispatch switch, rAF paint loop
 js/audio/          engine.js (master+cue buses, FX), deck.js (transport/loops/scratch), worklet
 js/midi/           mapping (generated) + SR overrides + hub + MON panel

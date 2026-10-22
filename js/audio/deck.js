@@ -225,7 +225,7 @@ export class Deck {
   bendStart(dir) { this.bendAmt = clamp(dir, -1, 1) * 0.08; this._setRateParam(); }
   bendEnd() { this.bendAmt = 0; this._setRateParam(); }
 
-  // ---- platter scratch (jog top touched: ticks drive platter speed, Traktor-style) ----
+  // ---- platter scratch (jog top touched: ticks drive platter speed, DJ-style) ----
   scratchStart() {
     if (!this.durSec) return;
     clearTimeout(this._scrubT);
