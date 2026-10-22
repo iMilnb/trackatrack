@@ -125,3 +125,11 @@ audio-graph gotchas, the MIDI mapping pipeline and the layout ground rules.
   transparently re-decodes them to WAV via ffmpeg (`/decode/`)
 - The cue stream through a second browser audio output adds noticeable latency
   (the single-stream DDJ route avoids it)
+
+## License
+
+GPL-3.0-only — Copyright (C) 2026 iMil.
+
+This program is free software: you can redistribute it and/or modify it under
+the terms of the GNU General Public License as published by the Free Software
+Foundation, version 3. See `LICENSE` for the full text.
