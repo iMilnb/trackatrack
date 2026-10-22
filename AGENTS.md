@@ -45,6 +45,8 @@ python3 tools/shot.py http://127.0.0.1:8360 /tmp/x.png --w 1920 --h 1080 --wait 
 
 ## Layout
 
+- `README.md` + `docs/screenshot.png` — user-facing docs; README explains sound
+  routing & controller usage to end users (keep both in sync when routing changes).
 - `index.html`, `css/app.css` — single page, CSS grid; body rows and pane widths are
   hand-tuned pixel values (faders use percentage heights — see `.deckslot`/`#decks`
   comments before changing rows/columns).
