@@ -42,6 +42,8 @@ select {
 .hmeter { width: 170px; height: 10px; background: #0c0d0f; border: 1px solid #2a2c30; border-radius: 2px; }
 #clock { font-family: monospace; font-size: 13px; color: #d0d3d8; }
 .tb { display: inline-flex; align-items: center; gap: 4px; color: var(--dim); font-size: 10px; }
+.tb-lbl { font-size: 9px; letter-spacing: 1px; color: var(--dim); }
+#header select.tb { max-width: 130px; }
 
 /* ================= Global section ================= */
 #globalsec {

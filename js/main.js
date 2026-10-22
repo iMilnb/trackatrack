@@ -12,6 +12,9 @@ import { makeKnob, makeVFader, makeHFader, makeMeter } from "./ui.js";
 import { parseKey, camelotColor, clamp } from "./util.js";
 
 const $ = (s) => document.querySelector(s);
+// Cookie persistence (survives remote use better than localStorage per user request).
+const setCookie = (k, v) => { document.cookie = `${k}=${encodeURIComponent(v)}; path=/; max-age=${365 * 24 * 3600}`; };
+const getCookie = (k) => { const m = document.cookie.match(new RegExp(`(?:^|; )${k}=([^;]*)`)); return m ? decodeURIComponent(m[1]) : null; };
 
 const engine = new Engine();
 window.__engine = engine; // debug handle
@@ -950,7 +953,7 @@ function frame() {
       const pick = (id, key) => {
         const sel = $(id);
         sel.innerHTML = opts;
-        const saved = localStorage.getItem(key);
+        const saved = getCookie(key) !== null ? getCookie(key) : localStorage.getItem(key); // cookie wins; old localStorage as migration
         const ddj = devs.find((d) => /ddj|pioneer/i.test(d.label || ""));
         const want = saved !== null ? saved : (ddj ? ddj.deviceId : "");
         if (want && devs.some((d) => d.deviceId === want)) sel.value = want;
@@ -964,8 +967,8 @@ function frame() {
       for (const d of devs) maxCh[d.deviceId] = chOf(d);
       if (m) engine.setMasterSink(m);
       engine.setCueSink(c, maxCh[c] || 2);
-      $("#masterOut").addEventListener("change", (e) => { engine.setMasterSink(e.target.value); localStorage.setItem("sink.master", e.target.value); });
-      $("#cueOut").addEventListener("change", (e) => { engine.setCueSink(e.target.value, maxCh[e.target.value] || 2); localStorage.setItem("sink.cue", e.target.value); });
+      $("#masterOut").addEventListener("change", (e) => { engine.setMasterSink(e.target.value); setCookie("sink.master", e.target.value); });
+      $("#cueOut").addEventListener("change", (e) => { engine.setCueSink(e.target.value, maxCh[e.target.value] || 2); setCookie("sink.cue", e.target.value); });
     } catch (e) { console.warn("device enum failed", e); }
 
     $("#monBtn").addEventListener("click", () => initMonitor.toggle && initMonitor.toggle());

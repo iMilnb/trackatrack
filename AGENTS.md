@@ -99,8 +99,10 @@ python3 tools/shot.py http://127.0.0.1:8360 /tmp/x.png --w 1920 --h 1080 --wait 
   rear pair (splitter → merger inputs 2/3).
 - Chrome's `DeviceInfo.maxChannelCount` is unreliable on Linux — trust
   `cueCtx.destination.maxChannelCount` **after** `setSinkId`.
-- Sink selections persist in localStorage (`sink.master`, `sink.cue`); device labels are
-  empty until mic permission is granted, so auto-pick can silently fall back to default.
+- Sink selections persist in **cookies** (`sink.master`, `sink.cue`; top-bar OUT/PHONES
+  selects) so remote browsers keep their routing; legacy localStorage values are honored
+  once as migration; device labels are empty until mic permission is granted, so auto-pick
+  can silently fall back to default.
 - Chrome auto-suspens a context that renders silence ~30 s (its PipeWire stream
   disappears from `wpctl status` — expected, not a bug).
 - ~40 library files are physically dead (all-zero bytes): nested `Defected Acapellas

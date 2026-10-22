@@ -21,6 +21,8 @@
   <select id="layoutSel" class="tb" title="Layout selector">
     <option value="2d">2 Deck</option>
   </select>
+  <span class="tb-lbl">OUT</span><select id="masterOut" class="tb sel-dev" title="Main output device"></select>
+  <span class="tb-lbl">PHONES</span><select id="cueOut" class="tb sel-dev" title="Headphone output device"></select>
   <button id="maxBrowserBtn" class="btn tb" title="Maximize Browser">⊞</button>
   <button id="prefsBtn" class="btn tb" title="Preferences">⚙</button>
   <button id="cruiseBtn" class="btn tb" title="Cruise Mode — automatically play the next track">CRUISE</button>
@@ -135,8 +137,6 @@
   <div class="modal-box">
     <div class="modal-head"><b>Preferences</b><button id="prefsClose" class="btn">✕</button></div>
     <div class="pref-grid">
-      <label>Master out</label><select id="masterOut"></select>
-      <label>Phones out</label><select id="cueOut"></select>
       <label>Master limiter</label><input type="checkbox" id="prefLimiter" checked>
       <label>Sample rate</label><span id="prefSr" class="mono">–</span>
       <label>Output latency</label><span id="prefLat" class="mono">–</span>
