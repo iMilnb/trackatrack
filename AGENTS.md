@@ -101,8 +101,10 @@ python3 tools/shot.py http://127.0.0.1:8360 /tmp/x.png --w 1920 --h 1080 --wait 
   `cueCtx.destination.maxChannelCount` **after** `setSinkId`.
 - Sink selections persist in **cookies** (`sink.master`, `sink.cue`; top-bar OUT/PHONES
   selects) so remote browsers keep their routing; legacy localStorage values are honored
-  once as migration; device labels are empty until mic permission is granted, so auto-pick
-  can silently fall back to default.
+  once as migration. **Chrome hides device labels AND randomizes deviceIds per page-load
+  until mic permission is granted** — without it cookies can't restore and DDJ auto-pick
+  fails; the first `pointerdown` fires a one-time `getUserMedia({audio:true})` to unlock
+  labels/IDs, then re-fills the selects (`main.js` boot block).
 - Chrome auto-suspens a context that renders silence ~30 s (its PipeWire stream
   disappears from `wpctl status` — expected, not a bug).
 - ~40 library files are physically dead (all-zero bytes): nested `Defected Acapellas

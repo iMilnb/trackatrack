@@ -944,31 +944,58 @@ function frame() {
     wireGlobalPanels();
 
     try {
-      const devs = await Promise.race([
+      const raceEnum = () => Promise.race([
         engine.listOutputs(),
         new Promise((_, rej) => setTimeout(() => rej(new Error("enumerate timeout")), 3000)),
       ]);
-      const opts = '<option value="">System default</option>' +
-        devs.map((d, i) => `<option value="${d.deviceId}">${d.label || "output " + (i + 1)}</option>`).join("");
-      const pick = (id, key) => {
-        const sel = $(id);
-        sel.innerHTML = opts;
-        const saved = getCookie(key) !== null ? getCookie(key) : localStorage.getItem(key); // cookie wins; old localStorage as migration
-        const ddj = devs.find((d) => /ddj|pioneer/i.test(d.label || ""));
-        const want = saved !== null ? saved : (ddj ? ddj.deviceId : "");
-        if (want && devs.some((d) => d.deviceId === want)) sel.value = want;
-        return sel.value;
-      };
-      const m = pick("#masterOut", "sink.master"), c = pick("#cueOut", "sink.cue");
       // 4-channel outputs (DDJ-SR: ch1/2=master, ch3/4=phones) need the cue stream
       // parked on the rear pair, otherwise PipeWire lands it on the main speakers.
       const chOf = (d) => (d && d.maxChannelCount >= 4) || /pioneer|ddj/i.test(d && d.label || "") ? 4 : 2;
-      const maxCh = { "": chOf(devs.find((d) => d.deviceId === "default")) };
-      for (const d of devs) maxCh[d.deviceId] = chOf(d);
-      if (m) engine.setMasterSink(m);
-      engine.setCueSink(c, maxCh[c] || 2);
+      let maxCh = {};
+      const SELS = [["#masterOut", "sink.master"], ["#cueOut", "sink.cue"]];
+      const populate = (ds) => {
+        maxCh = { "": chOf(ds.find((d) => d.deviceId === "default")) };
+        for (const d of ds) maxCh[d.deviceId] = chOf(d);
+        const opts = '<option value="">System default</option>' +
+          ds.map((d, i) => `<option value="${d.deviceId}">${d.label || "output " + (i + 1)}</option>`).join("");
+        const ddj = ds.find((d) => /ddj|pioneer/i.test(d.label || ""));
+        for (const [id, key] of SELS) {
+          const sel = $(id);
+          // cookie wins; old localStorage honored once as migration
+          const saved = getCookie(key) !== null ? getCookie(key) : localStorage.getItem(key);
+          sel.innerHTML = opts;
+          const want = saved !== null ? saved : (ddj ? ddj.deviceId : "");
+          sel.value = want && ds.some((d) => d.deviceId === want) ? want : "";
+        }
+      };
+      const applySinks = () => {
+        const m = $("#masterOut").value, c = $("#cueOut").value;
+        if (m) engine.setMasterSink(m);
+        engine.setCueSink(c, maxCh[c] || 2);
+      };
+      const devs = await raceEnum();
+      populate(devs);
+      applySinks();
       $("#masterOut").addEventListener("change", (e) => { engine.setMasterSink(e.target.value); setCookie("sink.master", e.target.value); });
       $("#cueOut").addEventListener("change", (e) => { engine.setCueSink(e.target.value, maxCh[e.target.value] || 2); setCookie("sink.cue", e.target.value); });
+      // Chrome returns EMPTY labels (and per-page-load random deviceIds!) until mic
+      // permission is granted — without that the DDJ-SR is unselectable and the saved
+      // cookie can never match next session. Ask once, on the first click, then re-fill.
+      if (devs.length && devs.every((d) => !d.label)) {
+        const hint = " — names hidden: click anywhere and allow microphone access once";
+        $("#masterOut").title += hint;
+        $("#cueOut").title += hint;
+        document.addEventListener("pointerdown", async () => {
+          try {
+            const st = await navigator.mediaDevices.getUserMedia({ audio: true });
+            st.getTracks().forEach((t) => t.stop());
+            populate(await raceEnum());
+            applySinks();
+            $("#masterOut").title = "Main output device";
+            $("#cueOut").title = "Headphone output device";
+          } catch (e) { console.warn("device label unlock failed", e); }
+        }, { once: true });
+      }
     } catch (e) { console.warn("device enum failed", e); }
 
     $("#monBtn").addEventListener("click", () => initMonitor.toggle && initMonitor.toggle());
